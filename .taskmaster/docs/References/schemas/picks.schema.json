@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "picks.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "entry_id": { "type": "string" },
+    "week_id": { "type": "string" },
+    "team_abbr": { "type": "string", "minLength": 2, "maxLength": 3 },
+  "status": { "type": "string", "enum": ["win", "loss", "in_progress", "tbd" ] },
+  "result_at": { "type": ["string", "null"], "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["entry_id", "week_id", "team_abbr"]
+}

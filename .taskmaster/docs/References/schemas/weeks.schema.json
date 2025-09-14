@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "weeks.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "season_year": { "type": "integer", "minimum": 2000, "maximum": 2100 },
+    "week_number": { "type": "integer", "minimum": 1, "maximum": 22 },
+    "is_current": { "type": "boolean" },
+    "lock_time": { "type": "string", "format": "date-time" },
+    "ineligible_teams": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "locked_games": {
+      "type": "array",
+      "items": { "type": ["string", "integer"] }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["season_year", "week_number"]
+}

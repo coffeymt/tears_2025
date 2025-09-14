@@ -1,6 +1,5 @@
-<context>
 # Overview  
-SBCCTears is a web application for running an NFL Survivor/Knockout pool that eliminates manual spreadsheets, texts, and emails. It lets players register, purchase/manage entries, submit weekly picks, and view results and pick distributions once the weekly lock hits (12:00 PM ET on Sundays). Admins can configure weeks/games, manage users/entries, sync games from ESPN, and run testing utilities. The value: remove friction and errors from a 450+ entry pool, provide a clear UX for players, and deliver secure, correct enforcement of survivor rules including once-per-team usage and reveal timing.
+SBCCTears ("Tears") is the South Boston Challenge Club (SBCC)'s NFL Survivor league web application. It eliminates manual spreadsheets, texts, and emails for the SBCC's Tears league by letting players register, purchase/manage entries, submit weekly picks, and view results and pick distributions once the weekly lock hits (12:00 PM ET on Sundays). Admins can configure weeks/games, manage users/entries, sync games from ESPN, and run testing utilities. The value: remove friction and errors from a 450+ entry pool, provide a clear UX for players, and deliver secure, correct enforcement of survivor rules including once-per-team usage and reveal timing.
 
 # Core Features  
 1) Authentication & Accounts
@@ -9,7 +8,7 @@ SBCCTears is a web application for running an NFL Survivor/Knockout pool that el
 - How: JWT auth; endpoints for register/login/me/logout; password reset via token email; mobile stored with normalization.
 
 2) Entries Management
-- What: Create, view, rename, and (pre-Week1) delete entries; mark elimination (admin) and payment status.
+- What: Create, view, (pre-Week1) rename, and (pre-Week1) delete entries; mark elimination (admin) and payment status.
 - Why: Each player may own multiple independent entries; lifecycle must be managed.
 - How: REST endpoints for CRUD on entries with authorization rules (owner/admin), week-lock constraints for destructive ops.
 
@@ -26,7 +25,7 @@ SBCCTears is a web application for running an NFL Survivor/Knockout pool that el
 5) Dashboard & Reveal Views
 - What: Player dashboard shows current week, countdown, entries summary, and embedded Reveal component with distribution and games. History matrix shows full-season results and leaderboards.
 - Why: Quick understanding of status and fun transparency post-lock.
-- How: Public read endpoints for weeks/games/history; reveal-full/snapshot with KPIs; client polls site time for accurate countdowns.
+- How: Public read endpoints for weeks/games/history; reveal-snapshot with KPIs; client polls site time for accurate countdowns.
 
 6) Admin Console
 - What: Weeks & Locks management, Admin Users, Admin Broadcast, destructive test utilities.
@@ -56,14 +55,19 @@ UI/UX considerations
 - Disabled/guarded controls before selecting a week or lacking permissions.
 - Toasts and inline errors for feedback; persistent status during background syncs.
 - Styling in external CSS, not inline; accessible forms and tables.
-</context>
-<PRD>
 # Technical Architecture  
 System components
 - Frontend: SPA or SSR app (technology TBD) focused on page set defined in frontend PRD; external CSS stylesheet; local time display based on server-provided `siteNowISO`.
 - Backend: Python API (FastAPI preferred for speed, typing, OpenAPI), exposing JSON under `/api/*` and internal `/internal/*` for scheduler.
 - Database: Supabase Postgres with RLS; JWT integration; use Supabase client for auth or custom JWT with user table (decision: custom JWT within backend with Supabase as DB).
-- Jobs: background tasks for ESPN sync and score finalization; cron via external scheduler or Supabase cron.
+- Jobs: background tasks for ESPN sync and score finalization; snapshot aggregation jobs for reveal/history and per-user views. Scheduling via Cloud Scheduler (preferred) or Supabase cron hitting internal endpoints. The ESPN sync and aggregator modules ship with the build but run out-of-band via scheduler.
+
+ESPN integration (summary)
+- Source: `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` with explicit `?week=` when available; fallback to current-week inference.
+- Abbreviation normalization: coerce common variants (e.g., `WSH→WAS`, `JAC→JAX`, `LA→LAR`) to canonical team codes.
+- Status mapping: map ESPN `pre|in|post` to `scheduled|in_progress|final`.
+- Upsert semantics: for a given week, delete existing Games then insert fresh to avoid duplicates/drift; track `source_url` used.
+- Auto-management: after syncing a week's slate, populate `weeks.ineligible_teams` from that slate to support validations/UI (opt-in, admin editable).
 
 Data models (initial)
 - users: id (uuid), email (unique), password_hash, first_name, last_name, is_admin, mobile, created_at.
@@ -71,7 +75,10 @@ Data models (initial)
 - weeks: id (uuid), season_year (int), week_number (int), is_current (bool), lock_time (timestamptz), ineligible_teams (text[]), locked_games (text[]), created_at.
 - teams: abbreviation (pk), name, city, conference, division.
 - games: id (uuid), week_id (fk), start_time (timestamptz), away_abbr (text fk), home_abbr (text fk), status (scheduled|in_progress|final), away_score (int), home_score (int).
-- picks: id (uuid or deterministic hash), entry_id (fk), week_id (fk), team_abbr (text fk), created_at, updated_at, result (win|loss|tbd), UNIQUE(entry_id, week_id).
+- picks: id (uuid or deterministic hash), entry_id (fk), week_id (fk), team_abbr (text fk), created_at, updated_at,
+  - result (win|loss|tbd) — derived from game outcomes
+  - status (pending|win|loss|eliminated|no_pick) — operational state for UX/KPIs
+  - UNIQUE(entry_id, week_id).
 - password_reset_tokens: id (uuid), user_id (fk), token (text unique), expires_at (timestamptz), used_at (timestamptz).
 - settings: key (pk), value (jsonb) — includes entry_fee.
 - site_time_override: id (singleton), value_iso (timestamptz) — optional feature flag.
@@ -82,17 +89,70 @@ Key rules and constraints
 - Lock behavior: server denies create/update/delete pick after `week.lock_time` and after per-game lock when enabled.
 - Reveal: picks hidden from other players until lock; reveal endpoints aggregate without exposing PII until allowed.
 
+Snapshot strategy (performance, privacy, and when to prefer it)
+- Overview: Precomputed snapshots are a tool — not a default requirement. For many read-heavy operations, properly indexed relational tables in Supabase/Postgres (with targeted materialized views or lightweight denormalized rows) will provide the necessary performance and should be the first option. Build and persist JSON snapshots only when measured queries or real-world profiling show indexes, query tuning, and caching are insufficient to meet latency targets.
+- When to prefer indexed Postgres tables (recommended first):
+	- Use normalized tables with focused indexes when the API can be satisfied by targeted queries (for example: picks filtered by `week_id`, aggregated counts grouped by `team_abbr`, or per-user slices using `entry_id`). These queries are often fast with proper indexing and avoid snapshot staleness complexity.
+	- Index patterns to consider:
+		- B-tree indexes on frequently filtered columns (`week_id`, `entry_id`, `team_abbr`, `created_at`).
+		- Partial indexes for pre-filtered states (e.g., `WHERE status = 'pending'` or `WHERE week_id = <current_week>`).
+		- BRIN for very large time-ordered tables where range scans are frequent.
+		- GIN/GiST indexes on JSONB payloads when you must query inside JSONB columns (use sparingly).
+		- Covering indexes (include) for hot read paths to avoid lookups.
+	- Materialized views: where a deterministic aggregation is expensive but can be refreshed on a schedule (or on-demand post-lock), prefer materialized views backed by indexes rather than full JSON snapshot objects.
+
+- When to use precomputed snapshots (optional):
+	- Criteria: Use snapshots when a measured/benchmarked query to normalized tables cannot meet the required latency under realistic load, and the cost of snapshot generation and storage is justified by read performance gains.
+	- Candidate artifacts (optional, canonical in Supabase):
+		- Reveal snapshot per week (optional): compact JSON summarizing week metadata, games, team pick counts, KPIs (wins/losses/tbd/total, alive_count, no_pick_count), and a lightweight leaderboard. Keep pre-lock payloads minimal to preserve secrecy.
+		- Season history matrix (optional): if building the matrix from normalized tables via queries is prohibitively slow, persist a JSONB matrix or a materialized view that represents the same data.
+		- Per-user entries-with-picks snapshot (optional): only when per-user joins/aggregates are too slow; otherwise query `entries`+`picks` with proper indexes and limit by `user_id`/`entry_id`.
+
+- Generation and freshness:
+	- Prefer materialized views or indexed summary tables where possible; snapshots (JSONB objects or Storage blobs) are an optimization when other approaches fail to meet targets.
+	- Aggregator job can build and write snapshots post-lock for locked weeks and may run idempotently. For current week, prefer producing minimal pre-lock payloads on demand.
+	- For per-user snapshots, prefer on-demand generation with caching (e.g., a short TTL in Supabase Storage or a cached JSONB row) when mutations are frequent.
+
+- Serving strategy:
+	- API logic: try the lightweight indexed queries / materialized view first. If latency is unacceptable or a complex join/aggregation would be repeated excessively, fall back to a persisted snapshot on read.
+	- Always include `generated_at` and a `source` indicator (materialized_view|snapshot|on-the-fly) in responses to help ops and debugging.
+
+- Measurement & testing guidance (must be done before committing snapshot builds):
+	- Define SLOs (e.g., 95th percentile < 200ms for reveal endpoints under expected concurrency).
+	- Create load tests that mirror production patterns (concurrent reads during reveals) and measure queries vs. snapshots.
+	- Instrument query plans (EXPLAIN ANALYZE), capture slow queries, and iterate on indexes and materialized views before opting into persisted snapshots.
+
+- Legacy import/archive: Google Cloud Storage (GCS) remains an optional legacy import source or archive location for historical JSON exports; it is not the primary runtime store.
+
+- Environment: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (service role) are required for DB operations; `SUPABASE_STORAGE_BUCKET` is optional if storing snapshots in Supabase Storage. `GCS_BUCKET`/`GCS_PREFIX` remain optional and used only for legacy imports/archives.
+
 APIs and integrations
 - Public: GET `/api/health`, `/api/teams`, `/api/weeks`, `/api/weeks/current`, `/api/weeks/completed`, `/api/weeks/:id/reveal-full`, `/api/weeks/:id/reveal-snapshot`, `/api/weeks/:weekId/games`, `/api/weeks/:weekId/picks` (enriched, respecting reveal rules), `/api/history`, `/api/history/matrix`, `/api/site-time`.
 - Auth/User: POST `/api/auth/register`, `/api/auth/login`; GET `/api/auth/me`; POST `/api/auth/logout`; PATCH `/api/account`; POST `/api/password-reset/request`; POST `/api/password-reset/submit`; GET `/api/users/by-email/:email`.
 - Entries/Picks: POST `/api/entries`; GET `/api/users/:userId/entries`; PATCH `/api/entries/:id`; DELETE `/api/entries/:id`; GET `/api/entries/:entryId/picks`; POST `/api/picks`; PATCH `/api/picks/:id`; DELETE `/api/picks/:id`.
 - Admin: POST `/api/weeks`; PATCH `/api/weeks/:id`; DELETE `/api/weeks/:id`; POST `/api/admin/set-current-week`; GET `/api/weeks/:weekId/games`; POST `/api/weeks/:weekId/games`; PATCH `/api/games/:id`; POST `/api/admin/picks/override`; DELETE `/api/admin/picks/:id`; POST `/api/admin/weeks/:weekId/randomize-picks`; POST `/api/admin/weeks/:weekId/randomize-scores`; POST `/api/admin/weeks/:weekId/finalize-scores`; GET `/api/admin/entries`; PATCH `/api/admin/entries/:entryId`; DELETE `/api/admin/entries/:entryId`; PATCH `/api/admin/entries/:entryId/payment`; PATCH `/api/admin/entries/:entryId/elimination`; POST `/api/admin/users`; GET `/api/admin/users`; PATCH `/api/admin/users/:userId`; POST `/api/admin/users/:userId/password`; DELETE `/api/admin/users/:userId`; POST `/api/admin/broadcast`; GET `/api/admin/settings`; PATCH `/api/admin/settings`; POST `/internal/sync-games/espn` (scheduler auth token).
 - ESPN: server-side integration to fetch season/week schedule and scores.
+ - Internal jobs (scheduler-only, token-protected):
+	- POST `/internal/sync-games/espn` — run ESPN sync for an explicit or inferred week; supports body `{ weekNumber?, seasonYear? }`.
+	- POST `/internal/aggregate/week` — build and persist reveal snapshot for a week; supports `{ weekNumber?, seasonYear?, runSync? }`. Only runs full sync/pick-status updates for non-current or locked weeks; otherwise writes minimal pre-lock snapshot.
+	- POST `/internal/snapshots/user/:userId` — generate the caller's entries-with-picks snapshot.
 
 Infrastructure requirements
-- Python runtime, FastAPI, Uvicorn, SQLAlchemy or Supabase client; Redis optional for caching snapshots; Supabase/Postgres; object storage optional for snapshots (can store in DB as JSON if simpler).
-- Config: environment variables for DB URL, JWT secret, CORS origins, scheduler token, ESPN source config, ENFORCE_HTTPS, TRUST_PROXY.
-- Emails: SMTP provider for password reset and broadcast.
+- Python runtime, FastAPI, Uvicorn, SQLAlchemy or Supabase client; Supabase/Postgres.
+- Config: environment variables for DB URL, JWT secret, CORS origins, scheduler token, ESPN source config, ENFORCE_HTTPS, TRUST_PROXY, Supabase (`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`), and optional legacy import/archive (`GCS_BUCKET`, `GCS_PREFIX`).
+	- SMTP/email configuration (smtp2go): the project uses `smtp2go.com` as the SMTP provider for password resets and broadcast emails. Do not store credentials in source. Expected env vars:
+		- `SMTP_HOST` (default: `smtp2go.com`)
+		- `SMTP_PORT` (typically `587` or `2525`)
+		- `SMTP_USER` (smtp2go username/API user)
+		- `SMTP_PASSWORD` (smtp2go API key/password)
+		- `SMTP_FROM` (from address for system emails)
+	- Note: you indicated you have the smtp2go credentials; the application will consume them from these env vars or from a secrets manager.
+- Emails: SMTP provider via `smtp2go.com` for password reset and broadcast.
+
+Scheduling & orchestration
+- Preferred: Google Cloud Scheduler hits internal endpoints on cadence (e.g., ESPN sync every N minutes on Sundays, aggregator after lock and periodically thereafter). Ensure idempotency.
+- Alternative: Supabase cron or a lightweight OS-level scheduler calling the same internal endpoints.
+- The ESPN sync module is packaged with the service and callable both via internal HTTP and directly by a CLI/runner during maintenance.
 
 # Development Roadmap  
 MVP (foundation to playable)
@@ -108,7 +168,7 @@ MVP (foundation to playable)
 Phase 2 (operability and insights)
 - Admin Users page, Admin Broadcast with filters; History Matrix + Leaderboard + Usage tabs.
 - Per-game locks and ineligible teams UI; randomize picks/scores helpers in Admin.
-- Caching of reveal snapshots; ESPN scheduled sync via internal endpoint.
+- Snapshotting: regular aggregator runs for old (locked) weeks; season history matrix persisted in Supabase (JSONB or Supabase Storage) when needed; per-user entries-with-picks snapshot generation on mutation and nightly refresh (optional). ESPN scheduled sync via Cloud Scheduler; monitoring/alerts on failures.
 - Payment management UI improvements; import/export CSV utilities.
 
 Phase 3 (polish and scale)
@@ -132,8 +192,9 @@ Out-of-scope for now
 - Reveal correctness and privacy: strictly gate reveal endpoints by `now >= lock_time`; snapshot without PII until allowed.
 - ESPN data reliability: fallback manual game entry; robust error handling and retries.
 - Timezone errors: centralize `getNow()` with site time override; always work in UTC, display local.
-- Scale (450+ entries): index picks by week/entry; precompute KPIs or snapshot on lock; paginate admin lists; use caching.
+- Scale (450+ entries): index picks by week/entry; consider materialized views or selective snapshots post-lock if needed; paginate admin lists; use caching.
 - Security: JWT expiration/refresh, strong password hashing, admin guards, rate limiting, CORS/Helmet equivalents.
+- Abbreviation mismatches and schedule drift from ESPN: maintain normalization map; allow admin overrides; on sync, fully overwrite week's games to avoid duplication.
 
 # Appendix  
 Research/notes
@@ -141,8 +202,48 @@ Research/notes
 - Backend endpoints adapted from prior Express design, reimagined for Python FastAPI and Supabase Postgres.
 - Styling to be handled via external CSS; mobile-first tables and forms.
 
+# Data Seeding & Migration
+When launching the new site we will import existing season data (users, entries, picks, games/results, and any weekly metadata) that currently resides as JSON files in Google Cloud Storage (GCS). This section outlines the expected process, ordering, validation, and rollback safeguards to make the import safe and repeatable.
+
+Purpose
+- Bulk-moving production data from legacy storage into Supabase so the new site can immediately serve an active season and historical results.
+
+Expected inputs (GCS JSON files)
+- `users.json` — array of users (id, email, first_name, last_name, mobile, created_at, is_admin?)
+- `teams.json` — canonical teams roster (abbreviation, name, city, conference, division)
+- `weeks.json` — week metadata (id, season_year, week_number, lock_time, is_current, ineligible_teams, locked_games)
+- `games.{week}.json` — per-week arrays of games (away_abbr, home_abbr, start_time, status, away_score, home_score)
+- `entries.json` — entries (id, user_id, name, is_paid, payment_type, paid_date, created_at)
+- `picks.{week}.json` — per-week picks array (entry_id, week_id, team_abbr, created_at, result/status)
+
+Ordering and idempotency
+- Recommended import order: `teams` → `users` → `weeks` → `games` → `entries` → `picks`.
+- Each import step should be idempotent: use upsert semantics keyed by natural keys (e.g., `users.email`, `teams.abbreviation`, `weeks.season_year+week_number`, `games` composite of week+home+away+start_time, `entries.id`, `picks` UNIQUE(entry_id, week_id)).
+- The import tooling should support a `--dry-run` mode validating payloads without writing, and a `--force` or transactional mode for final runs.
+
+Validation
+- Schema validation against the project's JSON Schema files (see `docs/References/schemas/*.schema.json`) before writes.
+- Referential integrity checks: all `entries.user_id` must exist in users; `picks.entry_id` must exist and `picks.week_id` must map to an imported week; team abbreviations must resolve to `teams`.
+- Business rules verification: no duplicate picks for same `entry_id/week_id`; one-team-per-season per entry (check historical picks payloads); pick timestamps should not violate `week.lock_time` for historical weeks.
+
+Rollback & safety
+- Each import step should be reversible: wrap multi-row imports in transactions where supported (Supabase/Postgres) or write to a staging table first then atomically swap.
+- Keep original JSON inputs in GCS unchanged and copy them to an `imports/archive/{timestamp}/` prefix before mutating production tables.
+- Generate an import-report (counts, errors, sample failing rows) and upload it back to GCS for audit.
+
+Admin tooling and endpoints
+- CLI: `scripts/import_from_gcs --gcs-bucket $GCS_BUCKET --prefix season-2025 --dry-run` with options for selective object import.
+- Internal HTTP: protected endpoint `POST /internal/import/from-gcs` that triggers a named import job pointing at configured GCS paths (scheduler/admin-only, token-protected).
+- Web UI: Admin Import page to run a dry-run, show validation reports, and execute final import with progress and a link to the archived source files.
+
+Edge cases and notes
+- Partial or missing files: import should fail fast with clear reporting and not leave partial state.
+- Timezone mismatches: canonicalize all datetimes to UTC on import and validate `start_time` vs `weeks.lock_time` in UTC.
+- Duplicate IDs between legacy and new system: prefer using legacy ids where possible (to make back-references easy) but allow remapping with an `id_map` report if needed.
+- Security: only allow imports with service-role credentials (no public endpoints). Use scheduler tokens or admin JWT to protect `POST /internal/import/from-gcs`.
+
+
 Technical specifications (initial)
 - Python 3.11+, FastAPI, Uvicorn, Pydantic, SQLAlchemy (or supabase-py for auth/storage), passlib for hashing, PyJWT for tokens.
 - Postgres schema outlined above; migrations via Alembic.
-- ESPN integration through public endpoints or a reliable sports data API (to be configured).
-</PRD>
+- ESPN integration through public endpoints or a reliable sports data API (to be configured). Include normalization, overwrite, and auto-ineligible-team behaviors as part of sync.

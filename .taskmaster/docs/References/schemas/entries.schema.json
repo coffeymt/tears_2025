@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "entries.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "user_id": { "type": "string" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+  "is_active": { "type": "boolean" },
+    "is_eliminated": { "type": "boolean" },
+    "is_paid": { "type": "boolean" },
+  "payment_type": { "type": "string", "enum": ["venmo", "paypal", "square", "cash" ] },
+  "paid_date": { "type": ["string", "null"], "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["user_id", "name"]
+}
