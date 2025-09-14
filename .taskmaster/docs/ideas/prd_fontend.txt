@@ -1,0 +1,252 @@
+sbcctears.com - Site PRD (Simplified, per-page)
+
+Scope
+-----
+This document describes each public and admin web page in the SBCCTears (South Boston Challenge Club) web application front-end. For each page it lists: purpose, layout/structure, and concrete functionality (user actions, inputs, buttons, data shown, and interactions with backend APIs).
+
+Audience
+--------
+Developers, product owners, and QA teams who need a concise reference for page-level behavior and UI responsibilities.
+
+Pages (alphabetical)
+--------------------
+1) Account
+----------
+Purpose
+  - Allow the logged-in user to view and update their personal profile and contact information.
+
+Layout / Structure
+  - Page header: "Account"
+  - Profile summary card (bordered panel)
+	- Email (read-only)
+	- Name (read-only)
+	- Member since (read-only)
+	- Mobile input (editable)
+	- Save button
+  - Secondary links: "Reset password"
+
+Functionality
+  - Read current user data from `me` prop or `/api/account` (as provided by parent). If `me` not present, show loading.
+  - ``Mobile`` input: sanitized before send (normalizes punctuation, enforces + prefix length rules).
+  - Save action: `PATCH /api/account` with { mobile }. on success: show toast "Profile updated" and reflect canonical server value.
+  - Error handling: show error message for network/server failures.
+  - Auth guard: if not logged in -> redirect to `/auth`.
+
+2) Admin Weeks & Locks (AdminConfig)
+------------------------------------
+Purpose
+  - Admin tool for creating, editing, setting current week, lock times, managing games & picks, syncing ESPN games, and test utilities (randomize picks/scores).
+
+Layout / Structure
+  - Page header: "Admin Weeks & Locks"
+  - Weeks Management panel
+	- Add Week inputs (season, week) + Add Week button
+	- Week selector (dropdown sorted by created_at) + Set Current Week button
+	- Lock time input (datetime-local) + Update/Reset buttons
+	- ESPN sync controls (season, week, Sync ESPN button)
+	- Randomization controls (flags + buttons)
+	- Ineligible teams input + Save button
+  - Games table for selected week (kickoff, away, home, status, score, lock toggle)
+  - Picks table for selected week (email, mobile, entry, result, team selector, actions)
+
+Functionality
+  - Load weeks, site-time, and teams on mount; set selected week to current week if present.
+  - Adding a week: `POST /api/admin/weeks` (server returns created week)
+  - Set current week: `POST /api/admin/weeks/:id/set-current` (or equivalent) — updates `is_current` flags
+  - Update lock time: `PATCH /api/weeks/:id` with new `lock_time` (ISO)
+  - Reset lock to default: server-side compute (Sunday 12:00) via `PATCH` or dedicated endpoint
+  - ESPN sync: `POST /api/admin/sync-games/espn` with season/week (or selected week fallback) — refreshes games and ineligible teams
+  - Randomize picks/scores/finalize-scores: Admin-only test endpoints, guarded by confirmation dialogs
+  - Games table
+	- Load `GET /api/weeks/:id/games`
+	- Toggle lock per game: `POST /api/admin/games/:id/lock` or `PATCH` (server stores locked games list on week)
+	  - Teams playing in locked games are ineligible for entries to submit as picks
+  - Picks table
+	- Load `GET /api/weeks/:id/picks`
+	- Sorting: by email default (client), other sorts available
+	- Search filter: client-side filter by user name or email
+	- Team selection for each pick: `POST /api/admin/picks/override` (optimistic UI update, revert on failure)
+	- Clear pick: `DELETE /api/admin/picks/:id`
+	- Load eligible no-pick rows: builds placeholders for alive entries without picks
+	- Export picks CSV: build CSV client-side and download
+
+Notes
+  - Page keeps controls enabled/disabled depending on `selectedWeekId` and admin privileges.
+  - All admin actions show toast/sync banner on success or show error string on failure.
+
+3) Admin Users (AdminUsers)
+---------------------------
+Purpose
+  - Manage users and entries; bulk operations; export CSV of users & their entries.
+
+Layout / Structure
+  - Header and filters: search box, entry filter (all/active/noEntries), paid filter, sort selectors
+  - Actions: create user form, CSV export button, bulk activate/eliminate entries
+  - List/table of users and their entries (paginated/virtualized if necessary)
+
+Functionality
+  - Load users/entries/settings via admin endpoints
+  - Support user updates: `PATCH /api/admin/users/:id`
+  - Create entries for user: `POST /api/entries`
+  - CSV export: client side assembly of user+entry rows
+  - Bulk actions: call admin endpoints with batch updates with concurrency control
+  - Lock/Unlock user creation of new or editing of existing entries
+
+4) Auth / Sign-in / Register (Auth)
+-----------------------------------
+Purpose
+  - Sign in existing users or register new users.
+
+Layout / Structure
+  - App header: "Tears" and site subtitle
+  - Toggle buttons: Sign In / Register
+  - Input fields: Email, Password; when Register: First name, Last name, Mobile (optional)
+  - Buttons: Sign In / Register (submit), Forgot password link
+
+Functionality
+  - Client-side validation (email format, required fields)
+  - Register: `POST /api/register` or equivalent, handle response errors, then optionally sign-in UX
+  - Sign-in: `POST /api/login` returning a token; parent keeps token and `me` state
+  - Forgot password link navigates to `/forgot-password`
+
+5) Forgot Password
+------------------
+Purpose
+  - Request a password-reset email for a user's email address.
+
+Functionality
+  - `POST /api/password-reset/request` with { email }
+  - Show status message: if email exists send link; otherwise show ambiguous success for security
+
+6) Reset Password
+-----------------
+Purpose
+  - Complete password reset using a token from the reset email.
+
+Functionality
+  - Read token from URL query (`?token=...`)
+  - Submit `POST /api/password-reset/submit` with { token, password }
+  - On success show confirmation and link to sign-in
+
+7) Dashboard (Home)
+-------------------
+Purpose
+  - Entry landing page for logged-in users: show current week, lock countdown, picks summary, Picks Distribution & Games widget (embedded Reveal), and quick navigation (Entries page link)
+
+Layout / Structure
+  - Top header: site title, nav
+  - Current week summary: Season & Week, Lock time (localized), reveal indicator if current week is revealed
+  - Reveal countdown panel (Reveal embedded) with small KPIs and distribution grid
+  - View week selector and countdown control (select weeksList)
+  - Embedded `Reveal` component (pick distribution & games) in an `embedded` mode
+  - Compact controls: "Go to Entries" button when current week not locked
+
+Functionality
+  - Loads `/api/weeks/current` and `/api/weeks` and `/api/site-time` on mount
+  - Default week selection logic:
+	- If the current week is not revealed (now < lock_time), default to the previous week if available; otherwise default to current week
+	- If current week is revealed (now >= lock_time), default to current week
+	- This decision is based on server-provided `siteNowISO` (via `/api/site-time`) and `week.lock_time`
+  - Reveal widget (embedded) receives `weekId` and `selectedWeek` props and does its own reveal logic (reveal-full or snapshot fallback)
+  - Live polling: dashboard polls lightweight endpoints periodically to keep `week` and `weeksList` up to date
+
+8) Entries Page (EntriesPage)
+-----------------------------
+Purpose
+  - Manage user entries (create, view, edit, pay) and submit picks (redirects to pick flow on grid or direct pick submission if allowed)
+
+Layout / Structure
+  - List of entries for the logged-in user (with pay/make pick/edit buttons)
+  - Create entry form
+
+Functionality
+  - CRUD: create entries via `POST /api/entries`, edit via `PATCH /api/entries/:id`
+  - Payment handling may use `PATCH` or admin endpoints depending on flow
+  - Link back to Dashboard and to pick submission UI
+  - Picks can no longer be submitted if an entry has been eliminated. If a submitted pick for an entry loses in any week, the entry loses in that week and is considered inactive/eliminated after that week.
+
+9) Grid / History Matrix (HistoryMatrix)
+----------------------------------------
+Purpose
+  - Show full-season matrix view of entries vs weeks for history and result heatmap; includes Leaderboard and Team Usage tabs.
+
+Layout / Structure
+  - Tabs: Matrix | Leaderboard | Usage
+  - Controls: Search (user or entry), season selector, compact responsive layout
+  - Matrix: Virtualized grid (rows: entries, columns: weeks) with colored cells for win/loss/tbd and sortable columns
+  - Leaderboard: table sorted by wins/losses, includes per-entry metrics and filters
+  - Team Usage: per-team counts and usage distribution
+
+Functionality
+  - Loads `/api/weeks`, `/api/entries`, `/api/teams`, and history data via endpoints
+  - Virtualized body for performance (keep header aligned with scrollbar width)
+  - Sorting options: alive-first, column sort for matrix
+
+10) Reveal (Pick Distribution & Games component)
+------------------------------------------------
+Purpose
+  - Shared component used on Dashboard and site pages to display pick distribution across teams and games for a selected week.
+
+Layout / Structure
+  - Accent title: "Pick Distribution & Games"
+  - KPI panel (Wins, Losses, TBD, Total)
+  - Distribution grid: per-team legend + count + percent
+  - Games table: kickoff, away, home, # picks, % picks
+  - Optional: Picks table (user/entry -> pick) when embedded with showPicksTable
+
+Functionality
+  - Accepts props: `embedded`, `preferLatestCompleted`, `weekId`, `selectedWeek`, `fetchPicks`, `showPicksTable`
+  - Resolve week: use `weekId` prop when provided else fallback to `/api/weeks/current`
+  - Try `/api/weeks/:id/reveal-full` first (server KPIs + snapshot). If 403 or missing, fallback to snapshot or games+picks fetch and client-side KPIs
+  - Compute pick counts, KPIs, and optionally fetch picks list
+  - Determine per-team game results (win/loss/tbd) from `games` data
+  - Live vs snapshot mode: display a small "live" badge when using client-side fallback
+
+11) Admin Broadcast (AdminBroadcast)
+-----------------------------------
+Purpose
+  - Allow admins to send messages/announcements to users.
+
+Layout / Functionality
+  - Message title, content, optional schedule fields
+  - Send button posts to admin broadcast endpoint
+  - Message preview and success/error feedback
+
+12) Account Recovery/Other Misc Pages
+------------------------------------
+- Misc pages like 404 or not authorized follow site-wide layout and show relevant messaging.
+
+Cross-page details & general rules
+---------------------------------
+- Time handling: reveal/lock checks use server-provided `siteNowISO` (`GET /api/site-time`) where available; otherwise fall back to client time. Use ISO strings in backend payloads.
+- Date/time inputs: admin pages use `datetime-local` values that are shown in local timezone. Backend expects and returns ISO strings.
+- Authorization: secured pages redirect to `/auth` when `token` is not present. Admin pages additionally check `me.is_admin` and render access denied for non-admins.
+- Disabled states: controls that act on a `selectedWeek` are consistently disabled when `selectedWeekId` is empty.
+- Error/toast handling: show inline error text for immediate feedback and toast banners for success operations.
+
+Appendix: API endpoints referenced (non-exhaustive)
+--------------------------------------------------
+- GET /api/weeks
+- GET /api/weeks/current
+- GET /api/weeks/:id/games
+- GET /api/weeks/:id/picks
+- GET /api/weeks/:id/reveal-full
+- GET /api/weeks/:id/reveal-snapshot (aggregated view of reveal-full for snappier response)
+- POST /api/admin/picks/override
+- POST /api/admin/sync-games/espn
+- POST /api/admin/purge/weeks
+- PATCH /api/weeks/:id
+- PATCH /api/account
+- POST /api/password-reset/request
+- POST /api/password-reset/submit
+
+
+Document history
+----------------
+2025-09-13 - Initial simplified PRD created listing pages, layout and functionality (frontend-focused).
+
+  
+
+Keep in mind ease of display on mobile devices with design decisions
+  
+Please create a PRD for this. Ask any questions you need for clarifying information.

@@ -1,0 +1,241 @@
+Overview
+--------
+- This document summarizes the server API and notable backend behaviors.
+- It documents all major endpoints, their request/response shapes, authentication & authorization requirements, side effects, background/scheduled hooks, and any features that the frontend does not call (i.e., backend-only admin/test utilities).
+- Be sure to keep in mind this backend PRD was built with Google Cloud Storage being leveraged as the data backend. For our project, we will be leveraging a Supabase database. Please make necessary adjustments to your PRD to account for this.
+
+General notes
+-------------
+- The app is an Express API that exposes JSON endpoints under `/api/*` plus a few `/internal/*` endpoints intended for scheduler/workers.
+- Auth is JWT-based via middleware: `authenticate` attaches `req.user`; `requireAdmin` restricts admin routes.
+- Site time can be overridden via an admin endpoint and is used to evaluate week locks and reveal availability. The helper `getNow()` returns either real time or the override.
+- Rate limiting, CORS, and Helmet security headers are configured; several behaviors depend on environment variables (e.g., `TRUST_PROXY`, `ENFORCE_HTTPS`, `GCS_BUCKET`, `GCS_PREFIX`, `SCHEDULER_AUTH_TOKEN`).
+- Deterministic IDs are used for some resources (users, entries, picks) to support idempotency especially when using object-store-backed datastores.
+
+Data loaders & helpers
+----------------------
+- `loadTeamsFile()` — loads `data/nfl_teams.json` from disk (fallback to require). Used across endpoints to validate team abbreviations and lookups.
+- `normalizeMobile(s)` — normalizes phone numbers to digits with optional leading `+` and trims to E.164-like lengths.
+- `siteTimeOverrideISO` / `getNow()` — admin-settable override to simulate site time for testing lock/reveal behavior.
+- `sanitizeString(s)` — trims, strips control chars and angle brackets from user-supplied strings.
+
+Public endpoints
+----------------
+- `GET /api/health`
+  - Returns `{ status: 'ok', timestamp }`.
+  - No auth.
+
+- `GET /api/teams`
+  - Returns array of teams loaded from `data/nfl_teams.json` (each team includes `abbreviation`, `name`, `city`, etc.).
+  - No auth.
+
+- `GET /api/weeks` / `GET /api/weeks/current` / `GET /api/weeks/:id/reveal-full` / `GET /api/weeks/:id/reveal-snapshot` / `GET /api/weeks/completed`
+  - Week list and current week endpoints are public. `reveal` endpoints serve pick reveals for a week but enforce reveal availability based on lock times and season logic.
+  - `reveal-full` will attempt to read a cached snapshot from GCS and, if present, return 404 to force the frontend to call `reveal-snapshot` instead. If no snapshot exists, builds on-demand via `jobs/aggregator.buildRevealSnapshot()` and returns a `games` + `snapshot` + `kpis` object.
+  - `reveal-snapshot` expects `GCS_BUCKET` configured and will read the snapshot JSON from GCS; if absent, it falls back to building the snapshot on-the-fly via aggregator.
+  - `GET /api/weeks/completed` lists weeks which are after lock or prior in the current season.
+  - `GET /api/history` returns a compact list of completed weeks with pick counts.
+  - `GET /api/history/matrix` returns a season pick matrix: entries x weeks, per-week pick and result (win/loss/tbd) with optional GCS snapshot loading if `GCS_BUCKET` is set.
+
+- Reveal helpers
+  - `GET /api/reveal/current` and `GET /api/reveal/:weekId` - return picks for the current or target week, enriched with entry/user/team info. Access is allowed only after the week lock has passed (current week) or if the target week is prior-in-season.
+
+Authentication & Account
+------------------------
+- `POST /api/users` — create user (idempotent by email); expects `{ email, password_hash, first_name, last_name }` and returns `201` with user. If duplicate, returns `200` with `idempotent: true`.
+- `GET /api/users/by-email/:email` — fetch user by email (public)
+
+- `POST /api/auth/register` — register and sign-in; expects `{ email, password, first_name, last_name, is_admin?, mobile? }`. Returns `{ token, user }` (201) or 200 if idempotent.
+- `POST /api/auth/login` — login; expects `{ email, password }`. Returns `{ token, user }`.
+- `GET /api/auth/me` — returns current authenticated user object.
+- `POST /api/auth/logout` — stateless logout (204). Frontend should clear token.
+- `PATCH /api/account` — authenticated update for current user; supports updating `mobile` only via normalized number.
+
+- Password reset flow:
+  - `POST /api/password-reset/request` — submit `{ email }` to request a reset link. Always responds 200 for privacy; creates a token record and attempts to email the user with a reset link using `sendMail()` (respecting `APP_BASE_URL` and `RESET_TOKEN_TTL_MIN`).
+  - `POST /api/password-reset/submit` — submit `{ token, password }` to change password. Validates token, checks expiry & used flag, hashes new password, updates `users` and marks token used.
+
+Player-facing features
+----------------------
+- Dashboard:
+  - `GET /api/dashboard` (authenticated) returns `current_week` minimal info and the user's entries along with `has_pick` flags for the current week.
+
+- Entries API:
+  - `POST /api/entries` (authenticated) create an entry for a user; idempotent by name and user; disallowed after Week 1 lock for non-admins.
+  - `GET /api/users/:userId/entries` (authenticated) list a user's entries (owner or admin).
+  - `PATCH /api/entries/:id` (authenticated owner or admin) rename or toggle elimination (owner-only before Week1 lock).
+  - `DELETE /api/entries/:id` (authenticated owner or admin) delete entry; cascade deletes picks; owner only before Week1 lock.
+
+- Picks API:
+  - `GET /api/entries/:entryId/picks` (authenticated owner or admin) list picks for an entry.
+  - `GET /api/weeks/:weekId/picks` (public) returns enriched picks for a week and also includes placeholder entries for non-eliminated entries without picks (used by Admin UI to show eligibility).
+  - `POST /api/picks` (authenticated owner) create a pick for an entry/week/team — validates ownership, week lock_time, team validity, ineligible teams, per-game locks, one-per-team reuse rules, no duplicates. Uses deterministic key for idempotency.
+  - `DELETE /api/picks/:id` (authenticated owner or admin) delete pick; enforces week lock.
+  - `PATCH /api/picks/:id` (authenticated owner or admin) update pick team's abbreviation; enforces validations similar to create.
+
+Admin features (require `requireAdmin` middleware)
+-------------------------------------------------
+- Broadcast email: `POST /api/admin/broadcast` — send email to users, with filter flags: `only_active`, `only_unpaid`, `only_no_entries`, `only_no_pick_current_week`, `week_id`, and `exclude_user_ids`. Uses `sendMail()` and returns count of sent messages.
+
+- Week management:
+  - `POST /api/weeks` — create week (admin). `lock_time` may be `auto` to set next Sunday noon.
+  - `PATCH /api/weeks/:id` — modify `is_current`, `lock_time`, `ineligible_teams`, `locked_games`.
+  - `DELETE /api/weeks/:id` — delete non-current week and cascade games/picks.
+  - `POST /api/admin/set-current-week` — admin utility to set current week and optionally update lock_time; unsets prior current flag on others.
+
+- Game management:
+  - `GET /api/weeks/:weekId/games` — list games for a week (sorted by start_time).
+  - `POST /api/weeks/:weekId/games` — create a game for a week, validating teams and different-abbr.
+  - `PATCH /api/games/:id` — update game fields (status, scores, time).
+
+- Admin Picks management:
+  - `POST /api/admin/picks/override` — upsert pick for entry/week/team, ignoring normal lock and reuse rules but still enforcing ineligible teams and per-game locks.
+  - `DELETE /api/admin/picks/:id` — delete a pick without lock constraints.
+  - `POST /api/admin/weeks/:weekId/randomize-picks` — testing helper to randomly assign picks for alive entries for a week (supports `overwrite` flag).
+
+- Admin Games testing helpers:
+  - `POST /api/admin/weeks/:weekId/randomize-scores` — assign random plausible scores to games for testing.
+  - `POST /api/admin/weeks/:weekId/finalize-scores` — mark games as final and then call `updatePickStatusesForWeek(weekId)` to recompute pick results and elimination logic.
+
+- Admin entry utilities:
+  - `GET /api/admin/entries` — list all entries with user info for payment management.
+  - `PATCH /api/admin/entries/:entryId` — update an entry as admin.
+  - `DELETE /api/admin/entries/:entryId` — delete as admin (cascade picks).
+  - `PATCH /api/admin/entries/:entryId/payment` — toggle/set `is_paid`, `payment_type`, and `paid_date` for an entry.
+  - `PATCH /api/admin/entries/:entryId/elimination` — toggle/set `is_eliminated` flag.
+
+- Admin user management:
+  - `POST /api/admin/users` — create user (idempotent; returns temporary password when autogenerated).
+  - `GET /api/admin/users` — list users.
+  - `PATCH /api/admin/users/:userId` — update a user (email/name/admin/mobile).
+  - `POST /api/admin/users/:userId/password` — set password directly (invalidates reset tokens).
+  - `DELETE /api/admin/users/:userId` — delete user and cascade entries/picks/resets.
+
+- Admin bulk purges (destructive testing utilities):
+  - `POST /api/admin/purge/users-entries` — purge users and entries. Body requires `confirm: 'DELETE ALL USERS AND ENTRIES'`. Optionally skip deleting current admin user with `deleteCurrentAdmin: true`.
+  - `POST /api/admin/purge/weeks` — purge weeks/games/picks. Body requires `confirm: 'DELETE ALL WEEKS'`.
+  - `POST /api/admin/purge/entries-only` — purge entries+picks only. Body requires `confirm: 'DELETE ALL ENTRIES'`.
+
+- Admin settings:
+  - `GET /api/admin/settings` & `PATCH /api/admin/settings` support a simple `entry_fee` setting via `models.settings`.
+
+- ESPN sync & scheduler
+----------------------
+- `POST /api/admin/sync-games/espn` — admin-triggered ESPN sync that calls `runSyncAndAggregate(opts)`. Mirrors legacy error codes (maps `WEEK_NOT_FOUND` to 404). Accepts optional `season_year`, `week_number` in body.
+- `POST /internal/sync-games/espn` — internal scheduled endpoint expecting `Authorization: Bearer <SCHEDULER_AUTH_TOKEN>` to allow Cloud Scheduler or worker to trigger the same `runSyncAndAggregate` logic. Returns `source: 'scheduler'` and mirrors legacy responses.
+
+- Background / utility behaviors
+-------------------------------
+- On finalizing scores (`/api/admin/weeks/:weekId/finalize-scores`) the service calls `updatePickStatusesForWeek` to compute winners/losers and elimination states.
+- Several admin endpoints call `sendMail()` (broadcast, password-reset, user creation temporary password) — depends on `utils/mailer` being configured.
+
+Features implemented server-side but not necessarily used by the frontend
+------------------------------------------------------------------------
+(These are endpoints or capabilities present in `index.js` that the current frontend may not call directly; highlight for product/QA awareness.)
+
+1) GCS-backed reveal snapshot branching behavior
+   - `GET /api/weeks/:id/reveal-full` returns 404 when a GCS-cached snapshot exists (to force frontend to use `reveal-snapshot`). The frontend currently calls both `/api/weeks/:id/reveal-snapshot` and `/api/weeks/:id/reveal-full` depending on availability; confirm whether the frontend ever expects a 404 from `reveal-full` as signal. If the frontend never calls `reveal-full`, this logic is unused and could be simplified.
+
+2) Matrix snapshot from GCS
+   - `GET /api/history/matrix` will attempt to read a precomputed matrix from GCS when available. If your frontend does not request `/api/history/matrix`, this path will only be used by external tools or diagnostics.
+
+3) Internal scheduler endpoint
+   - `POST /internal/sync-games/espn` is intended for Cloud Scheduler (or other workers) and uses a shared secret in `SCHEDULER_AUTH_TOKEN`. This will not be reachable from the frontend and should be kept private.
+
+4) Admin testing utilities (randomize picks/scores, purge endpoints)
+   - These endpoints provide powerful testing hooks which are likely not called by the public UI. They should remain protected by `requireAdmin` and considered destructive; include them in QA checklists if used.
+
+5) Broadcast email filters that compute complex sets
+   - The broadcast feature supports filters like `only_no_pick_current_week` which compute recipients based on db queries; verify frontend admin screens expose controls for these filters if desired.
+
+6) Deterministic ID creation for user/entry/pick
+   - Several endpoints create deterministic IDs via SHA-256 to avoid duplication in object store backends. This is an implementation detail the frontend need not know but is important when auditing id collisions or restoring backups.
+
+Security considerations
+-----------------------
+- Admin and internal endpoints are protected by `authenticate` and `requireAdmin` or by a shared secret for `/internal/*`.
+- Rate limiting applied in production reduces brute-force of auth endpoints.
+- Email-related endpoints (password-reset) always respond 200 for privacy.
+- Be careful with purge endpoints — require exact confirmation string; review audit logs and backups before use.
+
+(Listing of routes for quick scanning)
+Public:
+- GET /api/health
+- GET /api/teams
+- GET /api/weeks
+- GET /api/weeks/current
+- GET /api/weeks/completed
+- GET /api/weeks/:weekId/picks
+- GET /api/weeks/:weekId/games
+- GET /api/weeks/:id/reveal-full
+- GET /api/weeks/:id/reveal-snapshot
+- GET /api/reveal/current
+- GET /api/reveal/:weekId
+- GET /api/history
+- GET /api/history/matrix
+- GET /api/site-time
+
+Auth / User:
+- POST /api/users
+- GET /api/users/by-email/:email
+- POST /api/auth/register
+- POST /api/auth/login
+- GET /api/auth/me
+- POST /api/auth/logout
+- PATCH /api/account
+- POST /api/password-reset/request
+- POST /api/password-reset/submit
+
+Picks/Entries (auth protected):
+- POST /api/entries
+- GET /api/users/:userId/entries
+- PATCH /api/entries/:id
+- DELETE /api/entries/:id
+- GET /api/entries/:entryId/picks
+- POST /api/picks
+- DELETE /api/picks/:id
+- PATCH /api/picks/:id
+
+Admin (requireAdmin):
+- POST /api/admin/broadcast
+- POST /api/weeks
+- PATCH /api/weeks/:id
+- DELETE /api/weeks/:id
+- POST /api/admin/set-current-week
+- POST /api/admin/picks/override
+- DELETE /api/admin/picks/:id
+- POST /api/admin/weeks/:weekId/randomize-picks
+- POST /api/admin/weeks/:weekId/randomize-scores
+- POST /api/admin/weeks/:weekId/finalize-scores
+- GET /api/admin/entries
+- POST /api/admin/users
+- GET /api/admin/users
+- PATCH /api/admin/users/:userId
+- POST /api/admin/users/:userId/password
+- DELETE /api/admin/users/:userId
+- PATCH /api/admin/entries/:entryId
+- DELETE /api/admin/entries/:entryId
+- PATCH /api/admin/entries/:entryId/payment
+- PATCH /api/admin/entries/:entryId/elimination
+- POST /api/admin/sync-games/espn
+- POST /internal/sync-games/espn (internal - SCHEDULER_AUTH_TOKEN)
+- POST /api/admin/purge/users-entries
+- POST /api/admin/purge/weeks
+- POST /api/admin/purge/entries-only
+- GET /api/admin/settings
+- PATCH /api/admin/settings
+- POST /api/admin/site-time
+
+Future Data Store
+When the Supabase DB is created, I imagine we will need tables for (at a minimum):
+	Users\Players
+	Emails
+	Phones
+	Dates
+	Times
+	Payment Methods
+	Entries
+	Weeks
+	Teams
+	Games
+	Picks

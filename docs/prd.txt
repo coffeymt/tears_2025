@@ -1,0 +1,148 @@
+<context>
+# Overview  
+SBCCTears is a web application for running an NFL Survivor/Knockout pool that eliminates manual spreadsheets, texts, and emails. It lets players register, purchase/manage entries, submit weekly picks, and view results and pick distributions once the weekly lock hits (12:00 PM ET on Sundays). Admins can configure weeks/games, manage users/entries, sync games from ESPN, and run testing utilities. The value: remove friction and errors from a 450+ entry pool, provide a clear UX for players, and deliver secure, correct enforcement of survivor rules including once-per-team usage and reveal timing.
+
+# Core Features  
+1) Authentication & Accounts
+- What: Register, login, logout, account profile, password reset.
+- Why: Secure, self-serve access for players and admins.
+- How: JWT auth; endpoints for register/login/me/logout; password reset via token email; mobile stored with normalization.
+
+2) Entries Management
+- What: Create, view, rename, and (pre-Week1) delete entries; mark elimination (admin) and payment status.
+- Why: Each player may own multiple independent entries; lifecycle must be managed.
+- How: REST endpoints for CRUD on entries with authorization rules (owner/admin), week-lock constraints for destructive ops.
+
+3) Weekly Picks with Lock & Reveal
+- What: Players submit one pick (team) per entry each week, editable until Sunday 12PM ET; picks are hidden from others until lock and revealed after.
+- Why: Core mechanic; ensures fair play and strategy.
+- How: Week objects with `lock_time`; server enforces lock and one-per-team season rule; reveal endpoints to aggregate distribution and games; per-game lock support.
+
+4) Weeks, Games, and ESPN Sync
+- What: Admins create weeks, set current week, set `lock_time`, define ineligible teams and locked games; load/update games from ESPN and finalize results.
+- Why: Keeps schedule, scores, and results accurate without manual entry.
+- How: Admin endpoints including sync, randomize/finalize helpers; background job recomputes pick statuses and eliminations.
+
+5) Dashboard & Reveal Views
+- What: Player dashboard shows current week, countdown, entries summary, and embedded Reveal component with distribution and games. History matrix shows full-season results and leaderboards.
+- Why: Quick understanding of status and fun transparency post-lock.
+- How: Public read endpoints for weeks/games/history; reveal-full/snapshot with KPIs; client polls site time for accurate countdowns.
+
+6) Admin Console
+- What: Weeks & Locks management, Admin Users, Admin Broadcast, destructive test utilities.
+- Why: Operability at scale and communications.
+- How: Admin-only routes guarded by middleware; bulk/filters for broadcast.
+
+7) Supabase-backed Data Store
+- What: Persist users, entries, weeks, teams, games, picks, payments, and tokens.
+- Why: Replace GCS/object-store assumptions with relational DB and row-level security.
+- How: Supabase (Postgres) schema with RLS policies; SQL functions for aggregates.
+
+# User Experience  
+Personas
+- Player: registers/logs in, creates entries, submits/edits picks until lock, views results after lock, checks history/leaderboards.
+- Admin/Commissioner: configures season weeks, manages games and entries, monitors picks, runs sync/finalize, communicates via broadcast.
+
+Key flows
+- Sign up / Login / Forgot + Reset password.
+- Create entries; pay/update payment type (admin toggles or future self-serve).
+- Weekly pick submission: select entry -> pick team -> confirm; edit until lock.
+- Sunday reveal: view distribution, games table, winners/losers; dashboard updates.
+- Admin: create/set current week, set lock time, sync ESPN games, finalize scores to compute eliminations.
+
+UI/UX considerations
+- Mobile-first responsive pages; consistent top nav.
+- Clear lock countdown with timezone note, reveal badge after lock.
+- Disabled/guarded controls before selecting a week or lacking permissions.
+- Toasts and inline errors for feedback; persistent status during background syncs.
+- Styling in external CSS, not inline; accessible forms and tables.
+</context>
+<PRD>
+# Technical Architecture  
+System components
+- Frontend: SPA or SSR app (technology TBD) focused on page set defined in frontend PRD; external CSS stylesheet; local time display based on server-provided `siteNowISO`.
+- Backend: Python API (FastAPI preferred for speed, typing, OpenAPI), exposing JSON under `/api/*` and internal `/internal/*` for scheduler.
+- Database: Supabase Postgres with RLS; JWT integration; use Supabase client for auth or custom JWT with user table (decision: custom JWT within backend with Supabase as DB).
+- Jobs: background tasks for ESPN sync and score finalization; cron via external scheduler or Supabase cron.
+
+Data models (initial)
+- users: id (uuid), email (unique), password_hash, first_name, last_name, is_admin, mobile, created_at.
+- entries: id (uuid), user_id (fk), name (text unique per user per season), is_eliminated (bool), is_paid (bool), payment_type (text), paid_date (date), created_at.
+- weeks: id (uuid), season_year (int), week_number (int), is_current (bool), lock_time (timestamptz), ineligible_teams (text[]), locked_games (text[]), created_at.
+- teams: abbreviation (pk), name, city, conference, division.
+- games: id (uuid), week_id (fk), start_time (timestamptz), away_abbr (text fk), home_abbr (text fk), status (scheduled|in_progress|final), away_score (int), home_score (int).
+- picks: id (uuid or deterministic hash), entry_id (fk), week_id (fk), team_abbr (text fk), created_at, updated_at, result (win|loss|tbd), UNIQUE(entry_id, week_id).
+- password_reset_tokens: id (uuid), user_id (fk), token (text unique), expires_at (timestamptz), used_at (timestamptz).
+- settings: key (pk), value (jsonb) — includes entry_fee.
+- site_time_override: id (singleton), value_iso (timestamptz) — optional feature flag.
+
+Key rules and constraints
+- One pick per entry per week: UNIQUE(entry_id, week_id); server validates owner/admin.
+- One team per season per entry: enforce via server check against prior picks for that entry in same season.
+- Lock behavior: server denies create/update/delete pick after `week.lock_time` and after per-game lock when enabled.
+- Reveal: picks hidden from other players until lock; reveal endpoints aggregate without exposing PII until allowed.
+
+APIs and integrations
+- Public: GET `/api/health`, `/api/teams`, `/api/weeks`, `/api/weeks/current`, `/api/weeks/completed`, `/api/weeks/:id/reveal-full`, `/api/weeks/:id/reveal-snapshot`, `/api/weeks/:weekId/games`, `/api/weeks/:weekId/picks` (enriched, respecting reveal rules), `/api/history`, `/api/history/matrix`, `/api/site-time`.
+- Auth/User: POST `/api/auth/register`, `/api/auth/login`; GET `/api/auth/me`; POST `/api/auth/logout`; PATCH `/api/account`; POST `/api/password-reset/request`; POST `/api/password-reset/submit`; GET `/api/users/by-email/:email`.
+- Entries/Picks: POST `/api/entries`; GET `/api/users/:userId/entries`; PATCH `/api/entries/:id`; DELETE `/api/entries/:id`; GET `/api/entries/:entryId/picks`; POST `/api/picks`; PATCH `/api/picks/:id`; DELETE `/api/picks/:id`.
+- Admin: POST `/api/weeks`; PATCH `/api/weeks/:id`; DELETE `/api/weeks/:id`; POST `/api/admin/set-current-week`; GET `/api/weeks/:weekId/games`; POST `/api/weeks/:weekId/games`; PATCH `/api/games/:id`; POST `/api/admin/picks/override`; DELETE `/api/admin/picks/:id`; POST `/api/admin/weeks/:weekId/randomize-picks`; POST `/api/admin/weeks/:weekId/randomize-scores`; POST `/api/admin/weeks/:weekId/finalize-scores`; GET `/api/admin/entries`; PATCH `/api/admin/entries/:entryId`; DELETE `/api/admin/entries/:entryId`; PATCH `/api/admin/entries/:entryId/payment`; PATCH `/api/admin/entries/:entryId/elimination`; POST `/api/admin/users`; GET `/api/admin/users`; PATCH `/api/admin/users/:userId`; POST `/api/admin/users/:userId/password`; DELETE `/api/admin/users/:userId`; POST `/api/admin/broadcast`; GET `/api/admin/settings`; PATCH `/api/admin/settings`; POST `/internal/sync-games/espn` (scheduler auth token).
+- ESPN: server-side integration to fetch season/week schedule and scores.
+
+Infrastructure requirements
+- Python runtime, FastAPI, Uvicorn, SQLAlchemy or Supabase client; Redis optional for caching snapshots; Supabase/Postgres; object storage optional for snapshots (can store in DB as JSON if simpler).
+- Config: environment variables for DB URL, JWT secret, CORS origins, scheduler token, ESPN source config, ENFORCE_HTTPS, TRUST_PROXY.
+- Emails: SMTP provider for password reset and broadcast.
+
+# Development Roadmap  
+MVP (foundation to playable)
+- Auth: register/login/me/logout; password reset flow; account mobile update.
+- Teams data loader; Supabase schema base; RLS policies (basic) or API-layer auth only in MVP.
+- Weeks: create/list/current; set current week; lock time and site-time endpoint.
+- Games: admin create/list; ESPN sync minimal; finalize scores endpoint updates picks.
+- Entries: create/list/rename/delete (pre-Week1 for owners); payment flags via admin.
+- Picks: create/edit/delete with validations and lock enforcement; one team per season per entry.
+- Reveal: snapshot or live aggregation after lock; public reveal endpoints; dashboard with countdown.
+- Frontend pages: Auth, Dashboard, Entries, Reveal (embedded), Account, Forgot/Reset Password, basic Admin Weeks & Locks.
+
+Phase 2 (operability and insights)
+- Admin Users page, Admin Broadcast with filters; History Matrix + Leaderboard + Usage tabs.
+- Per-game locks and ineligible teams UI; randomize picks/scores helpers in Admin.
+- Caching of reveal snapshots; ESPN scheduled sync via internal endpoint.
+- Payment management UI improvements; import/export CSV utilities.
+
+Phase 3 (polish and scale)
+- Row-Level Security in Supabase with service role for backend; rate limiting; audit logs.
+- Better mobile UI/UX; accessibility polish; performance virtualized grids for matrix.
+- Advanced analytics (team usage trends, survival probability), email digests.
+
+Out-of-scope for now
+- Real-money payments integration; social features; multi-sport support.
+
+# Logical Dependency Chain
+1) Foundation: Supabase schema + Python API scaffolding + Teams data + Auth.
+2) Weeks and Games: create/list/current, lock handling, site time.
+3) Entries & Picks: CRUD and validations with lock rules; enforce once-per-team.
+4) Reveal & Dashboard: aggregation post-lock; basic front-end visibility for players.
+5) Admin Console expansion: weeks/locks/games utilities; users; broadcast.
+6) History Matrix & Leaderboard; ESPN scheduled sync; caching.
+
+# Risks and Mitigations  
+- Data integrity (once-per-team rule, duplicate picks): enforce with DB unique constraints and server validation; add idempotent keys for picks.
+- Reveal correctness and privacy: strictly gate reveal endpoints by `now >= lock_time`; snapshot without PII until allowed.
+- ESPN data reliability: fallback manual game entry; robust error handling and retries.
+- Timezone errors: centralize `getNow()` with site time override; always work in UTC, display local.
+- Scale (450+ entries): index picks by week/entry; precompute KPIs or snapshot on lock; paginate admin lists; use caching.
+- Security: JWT expiration/refresh, strong password hashing, admin guards, rate limiting, CORS/Helmet equivalents.
+
+# Appendix  
+Research/notes
+- Frontend page inventory and behaviors from simplified frontend PRD inform UI scope, ordering, and API needs.
+- Backend endpoints adapted from prior Express design, reimagined for Python FastAPI and Supabase Postgres.
+- Styling to be handled via external CSS; mobile-first tables and forms.
+
+Technical specifications (initial)
+- Python 3.11+, FastAPI, Uvicorn, Pydantic, SQLAlchemy (or supabase-py for auth/storage), passlib for hashing, PyJWT for tokens.
+- Postgres schema outlined above; migrations via Alembic.
+- ESPN integration through public endpoints or a reliable sports data API (to be configured).
+</PRD>
