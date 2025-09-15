@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.routes import auth as auth_router
 from app.routes import password_reset as password_reset_router
+from app.routes import weeks as weeks_router
 
 
 app = FastAPI(title="Tears 2025 API")
@@ -15,6 +16,7 @@ async def health():
 
 app.include_router(auth_router.router)
 app.include_router(password_reset_router.router)
+app.include_router(weeks_router.router)
 
 
 if __name__ == "__main__":

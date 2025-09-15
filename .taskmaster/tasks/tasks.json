@@ -137,8 +137,41 @@
           1,
           2
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Reusable Admin Authorization Dependency",
+            "description": "Develop a reusable dependency that can be injected into API routes to verify that the current authenticated user has administrative privileges. This will protect all admin-only endpoints.",
+            "dependencies": [],
+            "details": "The dependency should decode the JWT provided in the request, retrieve the associated user, and check for an 'is_admin' flag or role. If the user is not an administrator, the dependency should raise an HTTP 403 Forbidden exception.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Standard CRUD Endpoints for Weeks",
+            "description": "Build the standard Create, Read, Update, and Delete endpoints for managing the 'weeks' resource. These endpoints will be protected by the admin authorization dependency.",
+            "dependencies": [
+              "5.1"
+            ],
+            "details": "Implement `POST /api/weeks` to create a new week, `GET /api/weeks` to list all weeks, `PATCH /api/weeks/:id` to update details like `lock_time`, and `DELETE /api/weeks/:id`. Secure all of these endpoints using the admin authorization dependency created in the previous subtask.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement 'Set Current Week' Business Logic Endpoint",
+            "description": "Create the specialized admin endpoint to designate a specific week as the current one for the season, ensuring that only one week can be marked as current at any time.",
+            "dependencies": [
+              "5.1",
+              "5.2"
+            ],
+            "details": "Implement the `POST /api/admin/set-current-week` endpoint. It should accept a `week_id`. The service logic must perform a transaction that first sets `is_current = false` for all other weeks and then sets `is_current = true` for the specified week_id. This endpoint must also be protected by the admin authorization dependency.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 6,
@@ -551,7 +584,7 @@
     ],
     "metadata": {
       "created": "2025-09-14T23:24:48.603Z",
-      "updated": "2025-09-15T20:23:57.416Z",
+      "updated": "2025-09-15T21:17:05.799Z",
       "description": "Tasks for master context"
     }
   }
