@@ -113,7 +113,7 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -121,7 +121,7 @@
             "description": "Add an Alembic data migration (or standalone script) that inserts the canonical 32 NFL teams into the `teams` table using upsert semantics. Include abbreviation normalization notes and a simple verification query for tests.",
             "dependencies": [],
             "details": "Implement a migration script that performs an UPSERT (insert on conflict do update) for each canonical team record (abbreviation, name, city, conference, division). Ensure the script is idempotent and safe to run multiple times. Add a small test or script that queries `SELECT COUNT(*) FROM teams` and verifies 32 rows exist after migration.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Run migration and run verification query. Re-run migration to confirm idempotency."
           }
         ]
@@ -551,7 +551,7 @@
     ],
     "metadata": {
       "created": "2025-09-14T23:24:48.603Z",
-      "updated": "2025-09-15T20:01:53.592Z",
+      "updated": "2025-09-15T20:23:57.416Z",
       "description": "Tasks for master context"
     }
   }
