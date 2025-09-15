@@ -50,3 +50,10 @@ def get_current_user(credentials: "HTTPAuthorizationCredentials" = Depends(__imp
 @router.get("/me", response_model=UserOut)
 def me(current_user=Depends(get_current_user)):
     return current_user
+
+
+def require_admin(current_user=Depends(get_current_user)):
+    """Dependency that ensures the current user is an admin. Returns the user when OK, raises 403 otherwise."""
+    if not getattr(current_user, "is_admin", False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
+    return current_user
