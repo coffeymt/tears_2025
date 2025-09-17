@@ -425,7 +425,7 @@
           8,
           10
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -433,7 +433,7 @@
             "description": "Document and define the Pydantic model or JSON schema for the `GET /api/dashboard` endpoint. This schema will serve as the contract for the frontend and will include fields for user entries, their statuses, current week picks, and overall week information like lock times.",
             "dependencies": [],
             "details": "The schema should be well-structured to be easily consumed by the frontend. It should include a list of entries, where each entry object contains its ID, name, `is_eliminated` status, and an optional `current_pick` object. The top-level response should also contain a `current_week` object with `week_number`, `lock_time`, and a countdown value.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -444,7 +444,7 @@
               "12.1"
             ],
             "details": "This involves querying the `entries` table, filtering by the `user_id` from the authentication token. The query should select fields like `id`, `name`, and `is_eliminated`. This logic should be encapsulated in a reusable function or repository method.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -455,7 +455,7 @@
               "12.2"
             ],
             "details": "The function should accept a list of `entry_id`s. It will query the `picks` table, filtering by `entry_id` and the `week_id` corresponding to the current week. The query should return the selected `team_id` for each entry that has a pick. The result should be structured for easy mapping back to the entries.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -468,7 +468,7 @@
               "12.3"
             ],
             "details": "The endpoint will first require user authentication. It will then call the function from subtask 12.2 to get the user's entries. Next, it will use the entry IDs to call the function from subtask 12.3 to get the picks. Finally, it will merge these two datasets, add the current week's information (e.g., lock time), and serialize the final payload using the Pydantic model from subtask 12.1 before returning the HTTP response.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -484,7 +484,7 @@
           2,
           7
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": []
       },
       {
@@ -627,7 +627,7 @@
     ],
     "metadata": {
       "created": "2025-09-14T23:24:48.603Z",
-      "updated": "2025-09-17T11:31:40.171Z",
+      "updated": "2025-09-17T11:49:18.633Z",
       "description": "Tasks for master context"
     }
   }
