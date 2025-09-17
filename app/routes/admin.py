@@ -76,3 +76,19 @@ def patch_entry_elimination(entry_id: int, payload: EntryEliminationPatch, db: S
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entry not found")
     return entry
+
+
+class BroadcastIn(BaseModel):
+    subject: str
+    body: str
+    filter: str = "all"
+    unpaid_mode: Optional[str] = None
+
+
+@router.post("/broadcast")
+def post_broadcast(payload: BroadcastIn, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+    try:
+        recipients = admin_svc.send_broadcast(db=db, subject=payload.subject, body=payload.body, filter_kind=payload.filter, unpaid_mode=payload.unpaid_mode)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filter or unpaid_mode")
+    return {"sent": len(recipients), "recipients": recipients}

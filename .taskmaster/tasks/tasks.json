@@ -484,7 +484,7 @@
           2,
           7
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -498,8 +498,33 @@
           3,
           13
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 14,
+            "title": "Add SMTP settings to config",
+            "description": "Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, MAIL_FROM, BROADCAST_REPLY_TO, SMTP_USE_TLS to app/core/config.py",
+            "status": "done"
+          },
+          {
+            "id": 14,
+            "title": "Wire email util to settings",
+            "description": "Update app/utils/email.py to use settings and include Reply-To support",
+            "status": "done"
+          },
+          {
+            "id": 14,
+            "title": "Add .env.example",
+            "description": "Provide example SMTP environment variables for local development",
+            "status": "done"
+          },
+          {
+            "id": 14,
+            "title": "Document configuration and next steps",
+            "description": "Update README or developer docs with steps to provide credentials and to run broadcasts safely (queueing, rate limits)",
+            "status": "done"
+          }
+        ]
       },
       {
         "id": 15,
@@ -627,7 +652,7 @@
     ],
     "metadata": {
       "created": "2025-09-14T23:24:48.603Z",
-      "updated": "2025-09-17T11:49:18.633Z",
+      "updated": "2025-09-17T22:19:57.782Z",
       "description": "Tasks for master context"
     }
   }
