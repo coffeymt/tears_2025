@@ -241,7 +241,7 @@
           2,
           5
         ],
-  "status": "done",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -287,7 +287,7 @@
         "dependencies": [
           7
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -295,7 +295,7 @@
             "description": "Implement the `POST /api/picks` and `PATCH /api/picks/:id` endpoints. Include middleware or service logic to verify that the authenticated user owns the entry for which the pick is being submitted or modified.",
             "dependencies": [],
             "details": "This involves setting up the basic route handlers, defining request/response models, and adding an authorization check to ensure `entry.user_id == current_user.id` before proceeding.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -306,7 +306,7 @@
               "8.1"
             ],
             "details": "The service function will need to fetch the current week's data, compare the current server timestamp against the `lock_time` field, and raise an HTTP exception (e.g., 403 Forbidden) if the deadline has passed.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -317,7 +317,7 @@
               "8.1"
             ],
             "details": "Before creating or updating a pick, the service must perform a database query to fetch all previously picked teams for the entry (e.g., `SELECT team_id FROM picks WHERE entry_id = :entry_id`). If the submitted `team_id` is in the results, return a validation error.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -328,7 +328,7 @@
               "8.1"
             ],
             "details": "Wrap the database insertion logic in a try/except block. Catch the specific database integrity error and return an HTTP 409 Conflict error, suggesting the user should use the PATCH endpoint to edit their existing pick.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -627,7 +627,7 @@
     ],
     "metadata": {
       "created": "2025-09-14T23:24:48.603Z",
-      "updated": "2025-09-17T01:29:01.303Z",
+      "updated": "2025-09-17T02:13:18.798Z",
       "description": "Tasks for master context"
     }
   }
