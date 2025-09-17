@@ -19,6 +19,8 @@ class Entry(Base):
     picks = Column(JSON, nullable=False)  # list/dict of picks
     # whether this entry has been eliminated from the contest
     is_eliminated = Column(Boolean, nullable=False, default=False)
+    # whether payment was received for this entry
+    is_paid = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=lambda: _dt.datetime.now(_dt.timezone.utc))
 
     user = relationship("User")

@@ -9,6 +9,7 @@ from app.routes import picks as picks_router
 from app.routes import admin_weeks as admin_weeks_router
 from app.routes import public as public_router
 from app.routes import dashboard as dashboard_router
+from app.routes import admin as admin_router
 
 
 app = FastAPI(title="Tears 2025 API")
@@ -29,6 +30,7 @@ app.include_router(picks_router.router)
 app.include_router(admin_weeks_router.router)
 app.include_router(public_router.router)
 app.include_router(dashboard_router.router)
+app.include_router(admin_router.router)
 
 
 if __name__ == "__main__":
