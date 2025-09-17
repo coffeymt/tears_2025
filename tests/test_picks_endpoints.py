@@ -12,7 +12,7 @@ from app.models.base import Base
 from app.models.week import Week
 from app.models.team import Team
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 client = TestClient(app)
@@ -36,7 +36,7 @@ def test_post_pick_locked_week_returns_403():
     Base.metadata.create_all(bind=engine)
 
     # create a locked week and a team
-    week = Week(season_year=2025, week_number=99, lock_time=datetime.utcnow() - timedelta(hours=1))
+    week = Week(season_year=2025, week_number=99, lock_time=datetime.now(timezone.utc) - timedelta(hours=1))
     db.add(week)
     team = Team(abbreviation=f"LCK{uuid.uuid4().hex[:6]}", name="Locked Team", city="Lock")
     db.add(team)
@@ -61,7 +61,7 @@ def test_post_pick_unlocked_week_returns_201():
     Base.metadata.create_all(bind=engine)
 
     # create an unlocked week and a team
-    week = Week(season_year=2025, week_number=100, lock_time=datetime.utcnow() + timedelta(hours=2))
+    week = Week(season_year=2025, week_number=100, lock_time=datetime.now(timezone.utc) + timedelta(hours=2))
     db.add(week)
     team = Team(abbreviation=f"ULK{uuid.uuid4().hex[:6]}", name="Unlocked Team", city="Nowhere")
     db.add(team)

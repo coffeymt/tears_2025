@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from app.models.entry import Entry
 from app.models.week import Week
 from app.models.pick import Pick
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 
@@ -17,7 +17,10 @@ class WeekLockedError(ValueError):
 def _is_week_locked(week: Week) -> bool:
     if not week.lock_time:
         return False
-    return datetime.utcnow() >= week.lock_time
+    lock = week.lock_time
+    if lock.tzinfo is None:
+        lock = lock.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) >= lock
 
 
 def create_pick(db: Session, user_id: int, entry_id: int, week_id: int, team_id: int) -> Pick:
@@ -77,7 +80,7 @@ def update_pick(db: Session, user_id: int, pick_id: int, team_id: int) -> Option
         raise PickConflict("Team already picked by this entry in the season")
 
     pick.team_id = team_id
-    pick.updated_at = datetime.utcnow()
+    pick.updated_at = datetime.now(timezone.utc)
     db.add(pick)
     db.commit()
     db.refresh(pick)

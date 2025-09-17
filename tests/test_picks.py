@@ -16,7 +16,7 @@ from app.models.user import User
 from app.models.team import Team
 from app.models.base import Base
 from app.db import engine
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 client = TestClient(app)
@@ -28,7 +28,7 @@ def setup_user_and_week(db):
     db.commit()
     db.refresh(user)
 
-    week = Week(season_year=2025, week_number=1, lock_time=datetime.utcnow() + timedelta(hours=1))
+    week = Week(season_year=2025, week_number=1, lock_time=datetime.now(timezone.utc) + timedelta(hours=1))
     db.add(week)
     db.commit()
     db.refresh(week)
@@ -75,7 +75,7 @@ def test_pick_lock_behavior(tmp_path):
     # create user, week (locked), team, entry
     user = User(email=f'lock+{uuid.uuid4()}@test.com', hashed_password='x')
     db.add(user)
-    week = Week(season_year=2025, week_number=9, lock_time=datetime.utcnow() - timedelta(hours=1))
+    week = Week(season_year=2025, week_number=9, lock_time=datetime.now(timezone.utc) - timedelta(hours=1))
     db.add(week)
     team = Team(abbreviation=f"LCK{uuid.uuid4().hex[:6]}", name='Locked Team', city='Lock')
     db.add(team)

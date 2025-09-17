@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 import secrets
 import hashlib
 
@@ -54,7 +54,13 @@ def submit_password_reset(token: str, new_password: str, db: Session = Depends(g
         .first()
     )
 
-    if not pr or pr.expires_at < datetime.utcnow():
+    # Treat naive expires_at as UTC for backward compatibility
+    if not pr:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
+    expires_at = pr.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
 
     user = db.query(User).filter(User.id == pr.user_id).first()

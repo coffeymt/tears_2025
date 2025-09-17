@@ -1,6 +1,6 @@
 from passlib.context import CryptContext
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from app.core.config import settings
 
@@ -16,7 +16,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     exp = now + (expires_delta or timedelta(minutes=60))
     to_encode = {"sub": str(subject), "exp": exp}
     encoded = jwt.encode(to_encode, settings.JWT_SECRET, algorithm="HS256")

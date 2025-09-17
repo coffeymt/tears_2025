@@ -3,7 +3,7 @@ from app.models.entry import Entry
 from app.models.week import Week
 from app.models.user import User
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import delete
 from typing import Optional
 
@@ -39,7 +39,7 @@ def create_entry(db: Session, user_id: int, week_id: int, picks: Any, name: str 
         db.refresh(existing)
         return existing
 
-    entry = Entry(user_id=user_id, week_id=week_id, name=name, season_year=season, picks=picks, created_at=datetime.utcnow())
+    entry = Entry(user_id=user_id, week_id=week_id, name=name, season_year=season, picks=picks, created_at=datetime.now(timezone.utc))
     db.add(entry)
     db.commit()
     db.refresh(entry)
@@ -53,8 +53,11 @@ def get_entries_for_user(db: Session, user_id: int) -> List[Entry]:
 def _is_week_locked(week: Week) -> bool:
     if not week.lock_time:
         return False
-    # naive compare using UTC datetimes consistent with other code in repo
-    return datetime.utcnow() >= week.lock_time
+    # Compare aware times; treat naive lock_time as UTC for backward compatibility
+    lock = week.lock_time
+    if lock.tzinfo is None:
+        lock = lock.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) >= lock
 
 
 def update_entry(db: Session, entry_id: int, user_id: int, picks: Any = None, name: str = None) -> Optional[Entry]:

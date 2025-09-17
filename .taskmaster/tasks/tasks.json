@@ -344,7 +344,7 @@
           6,
           8
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -352,7 +352,7 @@
             "description": "Implement the `POST /api/admin/weeks/:weekId/finalize-scores` route and controller. This endpoint will serve as the entry point for the game finalization process and must be protected to ensure only administrators can trigger it.",
             "dependencies": [],
             "details": "Set up the API route using the specified path. Implement middleware to check for admin authentication/authorization. The controller should accept `weekId` from the path and a request body containing final scores for the games of that week. It will orchestrate calls to the subsequent services.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -361,7 +361,7 @@
             "description": "Develop the service logic to process the final scores received by the endpoint. This service will update the `games` table for the specified week, setting the final scores and changing the game status to 'final'.",
             "dependencies": [],
             "details": "Create a function/service that takes a week ID and a list of game scores as input. It should perform a bulk update or iterate through the games of the week to update their `home_team_score`, `away_team_score`, and `status` fields in the database. Ensure proper transaction handling to maintain data integrity.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -370,7 +370,7 @@
             "description": "Create a service to iterate through all user picks for the finalized week and update their results. This involves comparing each pick against the final game outcomes to determine if it was a 'win' or a 'loss'.",
             "dependencies": [],
             "details": "This service will be called after the games are updated. It needs to: 1) Fetch all games for the week with their final scores. 2) Fetch all picks for that same week. 3) For each pick, determine the winning team of the corresponding game. 4) Compare the picked team with the winning team and update the `result` column in the `picks` table to either 'win' or 'loss'. This should be done as a single, efficient batch operation.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -379,7 +379,7 @@
             "description": "Develop the final step of the process, which identifies all entries that made a losing pick for the week and marks them as eliminated.",
             "dependencies": [],
             "details": "After all picks have been resolved, this service will query the `picks` table for any records with a `result` of 'loss' for the given week. For each losing pick, it will retrieve the associated `entry_id` and update the `is_eliminated` flag to `true` in the `entries` table. This should handle multiple losing picks efficiently, potentially updating all affected entries in a single query.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -627,7 +627,7 @@
     ],
     "metadata": {
       "created": "2025-09-14T23:24:48.603Z",
-      "updated": "2025-09-17T02:13:18.798Z",
+      "updated": "2025-09-17T03:21:40.234Z",
       "description": "Tasks for master context"
     }
   }

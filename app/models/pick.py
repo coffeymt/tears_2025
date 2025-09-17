@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, UniqueConstraint
 from app.models.base import Base
-from datetime import datetime
+import datetime as _dt
 
 
 class Pick(Base):
@@ -12,5 +12,5 @@ class Pick(Base):
     week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False, index=True)
     team_id = Column(Integer, nullable=False, index=True)
     result = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: _dt.datetime.now(_dt.timezone.utc))
+    updated_at = Column(DateTime, default=lambda: _dt.datetime.now(_dt.timezone.utc))

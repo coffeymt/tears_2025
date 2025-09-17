@@ -12,7 +12,7 @@ from app.models.base import Base
 from app.models.week import Week
 from app.models.team import Team
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 client = TestClient(app)
 
@@ -33,7 +33,7 @@ def test_patch_pick_update_and_lock_behavior():
     Base.metadata.create_all(bind=engine)
 
     # create unlocked week and two teams
-    week = Week(season_year=2025, week_number=201, lock_time=datetime.utcnow() + timedelta(hours=2))
+    week = Week(season_year=2025, week_number=201, lock_time=datetime.now(timezone.utc) + timedelta(hours=2))
     db.add(week)
     team1 = Team(abbreviation=f"P1{uuid.uuid4().hex[:6]}", name="Patch Team 1", city="C1")
     team2 = Team(abbreviation=f"P2{uuid.uuid4().hex[:6]}", name="Patch Team 2", city="C2")
@@ -61,7 +61,7 @@ def test_patch_pick_update_and_lock_behavior():
     assert r.status_code == 200
 
     # create another week in same season and an entry that uses team1 (to cause a duplicate-team conflict on update)
-    week2 = Week(season_year=2025, week_number=202, lock_time=datetime.utcnow() + timedelta(hours=2))
+    week2 = Week(season_year=2025, week_number=202, lock_time=datetime.now(timezone.utc) + timedelta(hours=2))
     db.add(week2)
     db.commit()
     db.refresh(week2)
@@ -77,7 +77,7 @@ def test_patch_pick_update_and_lock_behavior():
     assert r.status_code == 409
 
     # lock the week by updating lock_time to past
-    db.query(Week).filter(Week.id == week.id).update({"lock_time": datetime.utcnow() - timedelta(hours=1)})
+    db.query(Week).filter(Week.id == week.id).update({"lock_time": datetime.now(timezone.utc) - timedelta(hours=1)})
     db.commit()
 
     # attempt to update after lock -> 403

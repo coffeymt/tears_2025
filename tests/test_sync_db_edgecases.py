@@ -1,7 +1,10 @@
 import sys
 import os
 import pytest
-from datetime import datetime
+import sys
+import os
+import pytest
+from datetime import datetime, timezone
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:
@@ -38,7 +41,7 @@ def test_rollback_on_failure(monkeypatch):
         db.refresh(week)
 
         # seed existing game so we can observe rollback restores it
-        existing = Game(week_id=week.id, start_time=datetime.utcnow(), home_team_abbr="AAA", away_team_abbr="BBB", status="scheduled")
+        existing = Game(week_id=week.id, start_time=datetime.now(timezone.utc), home_team_abbr="AAA", away_team_abbr="BBB", status="scheduled")
         db.add(existing)
         db.commit()
 

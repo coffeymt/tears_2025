@@ -14,13 +14,20 @@ from app.services.entries import create_entry, get_entries_for_user
 from app.routes.entries import router
 from fastapi.testclient import TestClient
 from app.main import app
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.services.entries import update_entry, delete_entry
 import json
 import uuid
 
 
 def setup_module(module):
+    # Ensure a fresh schema for tests (drop entries table if it exists to pick up new columns)
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        try:
+            conn.execute(text('DROP TABLE IF EXISTS entries'))
+        except Exception:
+            pass
     Base.metadata.create_all(bind=engine)
 
 
@@ -116,7 +123,7 @@ def test_update_and_delete_endpoints_and_locking():
         assert r.status_code == 200
 
         # set week lock_time to past to simulate locked week
-        week.lock_time = datetime.utcnow() - timedelta(minutes=1)
+        week.lock_time = datetime.now(timezone.utc) - timedelta(minutes=1)
         db.add(week)
         db.commit()
 

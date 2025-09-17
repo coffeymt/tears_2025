@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON, UniqueConstraint, Boolean
 from sqlalchemy.orm import relationship
 from app.models.base import Base
-from datetime import datetime
+import datetime as _dt
 
 
 class Entry(Base):
@@ -17,7 +17,9 @@ class Entry(Base):
     # derived from the associated Week at creation time
     season_year = Column(Integer, nullable=False, index=True)
     picks = Column(JSON, nullable=False)  # list/dict of picks
-    created_at = Column(DateTime, default=datetime.utcnow)
+    # whether this entry has been eliminated from the contest
+    is_eliminated = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=lambda: _dt.datetime.now(_dt.timezone.utc))
 
     user = relationship("User")
     week = relationship("Week")

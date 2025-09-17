@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from ..models.base import Base
@@ -16,4 +16,4 @@ class PasswordResetToken(Base):
 
     @classmethod
     def make_expiration(cls, hours: int = 1):
-        return datetime.utcnow() + timedelta(hours=hours)
+        return datetime.now(timezone.utc) + timedelta(hours=hours)

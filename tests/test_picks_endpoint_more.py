@@ -12,7 +12,7 @@ from app.models.base import Base
 from app.models.week import Week
 from app.models.team import Team
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 client = TestClient(app)
 
@@ -32,7 +32,7 @@ def test_post_duplicate_pick_returns_409():
     db = SessionLocal()
     Base.metadata.create_all(bind=engine)
 
-    week = Week(season_year=2025, week_number=301, lock_time=datetime.utcnow() + timedelta(hours=2))
+    week = Week(season_year=2025, week_number=301, lock_time=datetime.now(timezone.utc) + timedelta(hours=2))
     db.add(week)
     team = Team(abbreviation=f"DUP{uuid.uuid4().hex[:6]}", name="Dup Team", city="D")
     db.add(team)
@@ -58,7 +58,7 @@ def test_post_pick_wrong_user_returns_400():
     db = SessionLocal()
     Base.metadata.create_all(bind=engine)
 
-    week = Week(season_year=2025, week_number=302, lock_time=datetime.utcnow() + timedelta(hours=2))
+    week = Week(season_year=2025, week_number=302, lock_time=datetime.now(timezone.utc) + timedelta(hours=2))
     db.add(week)
     team = Team(abbreviation=f"OWN{uuid.uuid4().hex[:6]}", name="Owner Team", city="O")
     db.add(team)
