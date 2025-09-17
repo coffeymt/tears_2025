@@ -184,8 +184,51 @@
           4,
           5
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Secure POST /internal/sync-games/espn Endpoint",
+            "description": "Create the FastAPI endpoint, implement security, and orchestrate the sync process by calling the data fetching, transformation, and database services.",
+            "dependencies": [
+              "6.4"
+            ],
+            "details": "Define the `POST /internal/sync-games/espn` route. Implement a dependency to validate a secret `X-Internal-Sync-Token` header against an environment variable. This endpoint will orchestrate the calls to the ESPN client, the transformation service, and finally the database sync service.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create ESPN API Client for Game Data Fetching",
+            "description": "Implement a client or service function dedicated to fetching weekly game schedule and result data from the specified ESPN API URL.",
+            "dependencies": [],
+            "details": "Create a reusable function or class that handles making the HTTP GET request to the ESPN API. It should handle potential network errors, timeouts, and non-200 status codes gracefully. The function will accept parameters like year and week to construct the correct API URL and will return the raw JSON response.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Develop Data Transformation and Normalization Service",
+            "description": "Create a service that takes the raw JSON response from the ESPN API and transforms it into the application's internal `Game` model format.",
+            "dependencies": [
+              "6.2"
+            ],
+            "details": "This service will parse the API response. It must include logic to normalize team abbreviations (e.g., 'JAC' to 'JAX'). It will also map the various ESPN game statuses to the internal enum values (`scheduled`, `in_progress`, `final`). The output should be a list of `Game` objects ready for database insertion.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Transactional Database Sync Logic",
+            "description": "Implement the database logic to persist the transformed game data using a transactional delete-then-insert strategy.",
+            "dependencies": [
+              "6.3"
+            ],
+            "details": "Create a database service function that accepts a list of transformed `Game` objects and the target week. Within a single database transaction, it will first execute a `DELETE` statement to remove all existing games for that specific week and year. Then, it will execute an `INSERT` statement to add the new set of games.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 7,
@@ -584,7 +627,7 @@
     ],
     "metadata": {
       "created": "2025-09-14T23:24:48.603Z",
-      "updated": "2025-09-15T21:17:05.799Z",
+      "updated": "2025-09-17T00:57:05.223Z",
       "description": "Tasks for master context"
     }
   }
