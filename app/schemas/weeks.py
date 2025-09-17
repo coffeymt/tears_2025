@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from typing import List, Optional
 from datetime import datetime
 
@@ -25,6 +26,4 @@ class WeekUpdate(BaseModel):
 class WeekOut(WeekBase):
     id: int
     is_current: bool
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

@@ -18,7 +18,8 @@ def finalize_week(week_id: int, payload: FinalizeWeekPayload, db: Session = Depe
     Example payload: {"games": [{"game_id": 1, "home_score": 21, "away_score": 14}, ...]}
     """
     try:
-        result = finalize_week_scores(db, week_id, payload.dict())
+        # Use Pydantic v2 API to avoid deprecation warnings from .dict()
+        result = finalize_week_scores(db, week_id, payload.model_dump())
     except FinalizeError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return result

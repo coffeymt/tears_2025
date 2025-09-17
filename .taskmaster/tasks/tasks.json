@@ -395,7 +395,7 @@
           4,
           5
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -409,7 +409,7 @@
           8,
           9
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -425,7 +425,7 @@
           8,
           10
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
@@ -433,7 +433,7 @@
             "description": "Document and define the Pydantic model or JSON schema for the `GET /api/dashboard` endpoint. This schema will serve as the contract for the frontend and will include fields for user entries, their statuses, current week picks, and overall week information like lock times.",
             "dependencies": [],
             "details": "The schema should be well-structured to be easily consumed by the frontend. It should include a list of entries, where each entry object contains its ID, name, `is_eliminated` status, and an optional `current_pick` object. The top-level response should also contain a `current_week` object with `week_number`, `lock_time`, and a countdown value.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": ""
           },
           {
@@ -627,7 +627,7 @@
     ],
     "metadata": {
       "created": "2025-09-14T23:24:48.603Z",
-      "updated": "2025-09-17T03:21:40.234Z",
+      "updated": "2025-09-17T11:31:40.171Z",
       "description": "Tasks for master context"
     }
   }
