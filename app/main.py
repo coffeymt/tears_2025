@@ -4,6 +4,7 @@ from app.routes import auth as auth_router
 from app.routes import password_reset as password_reset_router
 from app.routes import weeks as weeks_router
 from app.routes import internal_sync as internal_sync_router
+from app.routes import entries as entries_router
 
 
 app = FastAPI(title="Tears 2025 API")
@@ -19,6 +20,7 @@ app.include_router(auth_router.router)
 app.include_router(password_reset_router.router)
 app.include_router(weeks_router.router)
 app.include_router(internal_sync_router.router)
+app.include_router(entries_router.router)
 
 
 if __name__ == "__main__":

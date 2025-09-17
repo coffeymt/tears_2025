@@ -241,7 +241,7 @@
           2,
           5
         ],
-        "status": "pending",
+  "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -249,7 +249,7 @@
             "description": "Develop the `POST /api/entries` and `GET /api/users/:userId/entries` endpoints. This includes implementing ownership authorization to ensure users can only create entries for themselves and view their own list of entries.",
             "dependencies": [],
             "details": "Create the service logic and API routes for creating a new entry associated with the authenticated user. Implement the endpoint to retrieve all entries for a given user, ensuring the request is authorized. Add basic validation for required fields like entry name.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -260,7 +260,7 @@
               "7.1"
             ],
             "details": "For both PATCH and DELETE operations, first verify that the authenticated user is the owner of the entry. Then, implement a check against the season's schedule to see if the Week 1 lock time has passed. If it has, the request should be rejected with an appropriate error message.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -272,7 +272,7 @@
               "7.2"
             ],
             "details": "Modify the service logic for `POST /api/entries` and `PATCH /api/entries/:id`. Before creating or updating an entry's name, query the database to ensure no other entry owned by the same user in the current season already has that name. Return a 409 Conflict error if a duplicate is found.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -627,7 +627,7 @@
     ],
     "metadata": {
       "created": "2025-09-14T23:24:48.603Z",
-      "updated": "2025-09-17T00:57:05.223Z",
+      "updated": "2025-09-17T01:29:01.303Z",
       "description": "Tasks for master context"
     }
   }
