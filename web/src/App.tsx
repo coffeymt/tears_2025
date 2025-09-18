@@ -8,6 +8,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import AccountPage from './pages/Account'
 import Dashboard from './pages/Dashboard'
+import Entries from './pages/Entries'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
   <Route path="auth/reset-password" element={<ResetPasswordPage />} />
   <Route path="dashboard" element={<Dashboard />} />
   <Route path="account" element={<AccountPage />} />
+  <Route path="entries" element={<Entries />} />
         {/* protected and admin routes will be added in later subtasks */}
       </Route>
     </Routes>
