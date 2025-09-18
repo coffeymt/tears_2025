@@ -1,0 +1,23 @@
+Sort  (cost=32.00..32.02 rows=5 width=44) (actual time=1.163..1.164 rows=0 loops=1)
+  Output: e.id, e.name, w.week_number, p.team_id
+  Sort Key: e.id, w.week_number
+  Sort Method: quicksort  Memory: 25kB
+  ->  Nested Loop  (cost=0.30..31.95 rows=5 width=44) (actual time=0.017..0.018 rows=0 loops=1)
+        Output: e.id, e.name, w.week_number, p.team_id
+        Inner Unique: true
+        ->  Nested Loop  (cost=0.15..31.04 rows=5 width=12) (actual time=0.017..0.017 rows=0 loops=1)
+              Output: p.team_id, p.entry_id, w.week_number
+              ->  Seq Scan on public.weeks w  (cost=0.00..19.00 rows=4 width=8) (actual time=0.016..0.016 rows=0 loops=1)
+                    Output: w.id, w.season_year, w.week_number, w.is_current, w.lock_time, w.ineligible_teams, w.locked_games
+                    Filter: (w.season_year = 2025)
+              ->  Index Scan using ix_picks_week_id on public.picks p  (cost=0.15..2.97 rows=4 width=12) (never executed)
+                    Output: p.id, p.entry_id, p.week_id, p.team_id, p.result, p.created_at, p.updated_at
+                    Index Cond: (p.week_id = w.id)
+        ->  Index Scan using ix_entries_id on public.entries e  (cost=0.15..0.18 rows=1 width=36) (never executed)
+              Output: e.id, e.user_id, e.week_id, e.name, e.season_year, e.picks, e.is_eliminated, e.is_paid, e.created_at
+              Index Cond: (e.id = p.entry_id)
+Query Identifier: -3643100332384182095
+Planning:
+  Buffers: shared hit=207 read=15 dirtied=1
+Planning Time: 34.753 ms
+Execution Time: 9.565 ms

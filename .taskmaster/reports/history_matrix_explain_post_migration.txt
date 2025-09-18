@@ -1,0 +1,30 @@
+Sort  (cost=18.48..18.49 rows=5 width=44) (actual time=0.031..0.032 rows=0 loops=1)
+  Output: e.id, e.name, w.week_number, p.team_id
+  Sort Key: e.id, w.week_number
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=5
+  ->  Nested Loop  (cost=1.58..18.42 rows=5 width=44) (actual time=0.006..0.006 rows=0 loops=1)
+        Output: e.id, e.name, w.week_number, p.team_id
+        Inner Unique: true
+        Buffers: shared hit=2
+        ->  Nested Loop  (cost=1.43..17.52 rows=5 width=12) (actual time=0.005..0.006 rows=0 loops=1)
+              Output: p.team_id, p.entry_id, w.week_number
+              Buffers: shared hit=2
+              ->  Bitmap Heap Scan on public.weeks w  (cost=1.28..5.48 rows=4 width=8) (actual time=0.005..0.005 rows=0 loops=1)
+                    Output: w.id, w.season_year, w.week_number, w.is_current, w.lock_time, w.ineligible_teams, w.locked_games
+                    Recheck Cond: (w.season_year = 2025)
+                    Buffers: shared hit=2
+                    ->  Bitmap Index Scan on idx_weeks_season_year_week_number  (cost=0.00..1.28 rows=4 width=0) (actual time=0.001..0.002 rows=0 loops=1)
+                          Index Cond: (w.season_year = 2025)
+                          Buffers: shared hit=2
+              ->  Index Scan using idx_picks_week_id on public.picks p  (cost=0.15..2.97 rows=4 width=12) (never executed)
+                    Output: p.team_id, p.entry_id, p.week_id
+                    Index Cond: (p.week_id = w.id)
+        ->  Index Scan using ix_entries_id on public.entries e  (cost=0.15..0.18 rows=1 width=36) (never executed)
+              Output: e.id, e.user_id, e.week_id, e.name, e.season_year, e.picks, e.is_eliminated, e.is_paid, e.created_at
+              Index Cond: (e.id = p.entry_id)
+Query Identifier: 1247429075385457597
+Planning:
+  Buffers: shared hit=398
+Planning Time: 3.301 ms
+Execution Time: 0.139 ms

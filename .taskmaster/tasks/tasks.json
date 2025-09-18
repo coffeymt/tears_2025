@@ -536,7 +536,7 @@
         "dependencies": [
           11
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -544,7 +544,7 @@
             "description": "Document and define the precise JSON structure for the `/api/history/matrix` endpoint response. This schema should be optimized for easy consumption and rendering as a table on the frontend.",
             "dependencies": [],
             "details": "The schema should clearly outline the structure, such as an array of entry objects, where each object contains the entry's name and a list or map of their picks for each week of the season. This definition will serve as the contract for both the backend implementation and the frontend consumer.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -553,7 +553,7 @@
             "description": "Develop a first-pass SQL query that joins the `entries`, `picks`, and `weeks` tables to gather all the raw data required to build the history matrix. The focus at this stage is on correctness, not performance.",
             "dependencies": [],
             "details": "The query should retrieve the entry name, the week number, and the team picked for every pick made in the season. This will result in a flat list of records that will be processed and structured in a later step.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -564,7 +564,7 @@
               "15.2"
             ],
             "details": "The query will be tested against a populated database to simulate real-world load. The query plan will be inspected for inefficiencies like sequential scans. Necessary indexes on tables like `picks` (on `entry_id` and `week_id`) will be created and verified to improve query speed.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -576,7 +576,7 @@
               "15.3"
             ],
             "details": "The endpoint logic will fetch the flat data from the database using the optimized query. It will then iterate through the results to build the nested JSON object, grouping picks by entry. The final, structured data will be returned as the API response.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -592,7 +592,7 @@
           1,
           4
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
@@ -600,7 +600,7 @@
             "description": "Create the initial CLI script (`scripts/import_from_gcs`) with argument parsing for options like `--dry-run`. Implement the Google Cloud Storage client setup and authentication to list and download JSON files from the specified bucket.",
             "dependencies": [],
             "details": "The script should be able to connect to GCS, authenticate using service account credentials, and list the relevant JSON files (teams.json, users.json, etc.). It should parse command-line arguments, specifically a `--dry-run` flag that will be used in later subtasks.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": ""
           },
           {
@@ -652,7 +652,7 @@
     ],
     "metadata": {
       "created": "2025-09-14T23:24:48.603Z",
-      "updated": "2025-09-17T22:19:57.782Z",
+      "updated": "2025-09-18T02:41:06.458Z",
       "description": "Tasks for master context"
     }
   }

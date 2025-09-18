@@ -13,8 +13,17 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
-fileConfig(config.config_file_name)
+# Interpret the config file for Python logging. Be tolerant of missing/partial logging sections
+try:
+    fileConfig(config.config_file_name)
+except Exception:
+    # Some CI or simplified alembic.ini files may lack full logger sections; ignore logging setup in that case
+    pass
+
+# If DATABASE_URL is provided in the environment (e.g., Supabase), prefer it for migrations
+db_url = os.environ.get('DATABASE_URL')
+if db_url:
+    config.set_main_option('sqlalchemy.url', db_url)
 
 from app.models.base import Base  # noqa: E402
 from app.models import user, team  # noqa: F401,E402

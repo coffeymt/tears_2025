@@ -1,6 +1,6 @@
 """seed 32 NFL teams
 
-Revision ID: seed_32_teams_20250915
+Revision ID: 20250915_seed_32_teams
 Revises: 
 Create Date: 2025-09-15 00:00:00.000000
 """
@@ -8,7 +8,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = 'seed_32_teams_20250915'
+revision = '20250915_seed_32_teams'
 down_revision = None
 branch_labels = None
 depends_on = None
