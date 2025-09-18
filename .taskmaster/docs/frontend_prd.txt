@@ -1,0 +1,204 @@
+Frontend PRD — Tears (React)
+
+Purpose
+- Build a responsive, accessible React single-page application (SPA) that implements the user flows defined in the backend PRD: registration/login, entries management, weekly pick submission, dashboard and reveal, admin weeks/games management, admin broadcasts and import tooling UI. The frontend focuses on performance during reveal time (high concurrent reads) and clarity around lock timing and pick secrecy.
+
+Audience
+- Players: mobile-first users who will register, create entries, submit weekly picks, and view weekly reveals.
+- Admins: power users who configure weeks/games, run syncs, finalize scores, and run imports.
+
+High-level decisions
+- Framework: React 18 (functional components + hooks) with Vite for development build and speed.
+- Language: TypeScript for type safety across components and data models.
+- Styling: CSS Modules or Tailwind CSS (team preference). Use external stylesheet and utility-first classes for speed; ensure global design system tokens for colors/spacing/typography.
+- State management: React Query (TanStack Query) for server-state with mutations; lightweight local state via `useState`/`useReducer`. Use React Context for auth/session and feature flags.
+- Routing: React Router (v6) with nested routes and protected route wrappers for auth/admin boundaries.
+- Forms & validation: React Hook Form + Zod for typed validation and consistent UX.
+- Build & tooling: Vite, ESLint + Prettier, Vitest for unit tests, Playwright for E2E tests.
+- Accessibility: Lighthouse and axe-core checks; keyboard navigable, semantic HTML, proper focus management for modals and forms.
+- Internationalization: Keep all strings in a simple i18n layer (react-intl or i18next) — English primary for now.
+- Auth: JWT stored in `HttpOnly` cookie (preferred) or in-memory (fallback) depending on backend cookie support. Use refresh tokens if supported.
+- CI/CD: GitHub Actions — run typecheck, lint, unit tests, build; deploy static assets to Netlify/Vercel (or Supabase Storage + CDN) as part of a release job.
+
+Pages & Routes
+- / (Dashboard)
+  - Shows current week card (number, lock_time countdown), user's entries summary (entries list with `is_eliminated`, `is_paid` flags), and quick action to pick for current week.
+  - If lock passed: shows reveal teaser and button to view reveal snapshot.
+- /auth/login
+  - Email/password login form; link to `forgot-password`.
+- /auth/register
+  - Registration form (email, password, first/last name, mobile optional).
+- /auth/forgot-password
+  - Enter email to request reset.
+- /auth/reset-password?token=...
+  - Reset form; call backend submit endpoint.
+- /account
+  - Profile editing: name, mobile, password change, email opt-in.
+- /entries
+  - List entries with quick actions (rename, delete pre-lock, view picks). Create entry modal.
+- /entries/:entryId/picks
+  - Entry-specific pick interface for the current week: team selection, confirmation modal. Show history of picks for that entry.
+- /weeks
+  - Public weeks listing with lock times; admin link to manage.
+- /weeks/:weekId/reveal
+  - Reveal snapshot: games list, pick distribution (counts), leaderboard, alive counts. Restricted: only shown after lock_time.
+- /admin (Admin console)
+  - Sub routes:
+    - /admin/weeks — CRUD for weeks, set current week, lock time UI.
+    - /admin/weeks/:id/games — add/edit games, import sync controls (kick off ESPN sync). Show game status/stats.
+    - /admin/entries — list, filter, mark payment/elimination, bulk CSV import.
+    - /admin/users — list users, reset password, toggle admin role.
+    - /admin/import — UI for running legacy GCS imports: upload JSON or run dry-run; show validation report and run import.
+    - /admin/broadcast — send emails with filters; preview and confirmation modal.
+
+Core Components
+- Layout components
+  - TopNav: logo, primary nav, auth/account menu, responsive hamburger.
+  - Footer: minimal legal/copyright.
+  - ProtectedRoute & AdminRoute wrappers.
+- Dashboard components
+  - WeekCard: shows week number, lock countdown, `is_current` badge.
+  - EntryCard: shows entry name, elimination/payment status, quick pick button.
+  - PickActionButton: opens pick modal.
+- Picks UI
+  - TeamGrid: responsive grid of teams with selection state; disabled teams when ineligible.
+  - ConfirmPickModal: shows entry, team, predicted lock time, confirm/cancel actions.
+  - PickHistory: chronological list of past picks for that entry.
+- Reveal UI
+  - GamesList: shows games with results; per-game winner highlight.
+  - DistributionChart: simple bar chart of picks per team (use Recharts or Chart.js lightweight wrapper).
+  - Leaderboard: top surviving entries (basic list with pagination).
+- Admin UI
+  - WeeksForm: create/update week modal with lock_time picker (tz-aware calendar/time input) and ineligible teams multiselect.
+  - GamesTableEditor: CRUD rows, manual score entry, status dropdown.
+  - ImportRunner: file uploader or GCS params form; shows detailed validation report; run dry-run then final import.
+  - BroadcastForm: subject/body, recipient filters, preview pane.
+- Shared utilities
+  - useAuth: React Context to keep token, current user, login/logout helpers.
+  - api.ts: centralized API client using Axios with interceptors for auth and retry logic.
+  - hooks: `useSiteTime` to poll `/api/site-time` every 15s and provide server-corrected time for countdowns.
+  - toasts: global notification system for success/error messages.
+  - error boundary + global 500 fallback.
+
+Data & Caching Strategy
+- Use React Query for server state: cache queries by keys (eg `['weeks','current']`, `['entries','user', userId]`).
+- Stale-time & refetch:
+  - Reveal snapshots: refetch on mount and when `siteTime` crosses `lock_time` threshold.
+  - Prefer `onWindowFocus` refetch for security-sensitive endpoints.
+- Pagination: server-side for large lists (admin user/entries pages).
+
+Validation & Business Logic
+- Client-side validate with Zod for quick feedback, but server must be source of truth.
+- Prevent UI actions that would be rejected by server (e.g., disable pick buttons after `lock_time`, visually disable ineligible teams).
+- For picks, do optimistic updates with rollback if server rejects (React Query mutate with rollback).
+
+Testing Strategy
+- Unit tests (Vitest): for utilities, hooks, components (snapshot + behavior), form validation.
+- Integration/E2E (Playwright): critical flows: register/login, create entry, submit pick (pre-lock), reveal snapshot flow, admin sync/finalize.
+- Accessibility tests: axe-core run in CI against critical pages (dashboard, pick flow, admin import).
+
+Performance & Scaling
+- Static build via Vite; prerender minimal public pages if required.
+- Use CDN for static assets (Netlify/Vercel/Supabase Storage + CDN).
+- Avoid heavy client-side aggregation for reveals; rely on server-provided snapshot JSON. Keep charts simple and virtualize long lists.
+
+Security
+- Use HTTPS-only cookies for JWT if backend supports; otherwise store token in memory and refresh tokens securely.
+- CSRF: rely on same-site cookies or include CSRF header with requests.
+- Rate-limit admin endpoints and sensitive actions; show clear audit trail in admin UI for overrides.
+
+Deployment & CI
+- GitHub Actions pipeline:
+  - PR checks: `pnpm install && pnpm lint && pnpm test` (typecheck, lint, unit tests)
+  - Build: `pnpm build` produces artifacts
+  - Deploy: on merge to `main` deploy to preview environment (auto) and production on tag.
+- Environment variables for build: `REACT_APP_API_BASE`, `SENTRY_DSN` (optional), `VITE_*` prefixed for Vite.
+
+Developer DX
+- Repo layout: `web/` for frontend; include `README.md` explaining local dev (`pnpm install`, `pnpm dev`), test commands, and env file sample.
+- Prettier + ESLint configuration consistent with backend style.
+- Storybook (optional) for component dev and UI review.
+
+Rollout plan
+- Phase 1: MVP UI: Auth, Dashboard, Entries, Basic Picks, Reveal snapshot integration.
+- Phase 2: Admin console, Import UI, Broadcast, History Matrix.
+- Phase 3: Performance polish, materialized snapshots, advanced analytics.
+
+Open questions / decisions needed
+- Prefer cookie-based JWT or Authorization header? Cookie simplifies XSRF but backend must set secure cookie.
+- Styling approach: Tailwind vs CSS Modules — pick one for consistency.
+- Charting library preference: Recharts vs Chart.js vs lightweight custom SVG.
+
+Immediate next tasks (after PRD)
+- Scaffold the React app (`web/`) with Vite + TypeScript + React Query + React Router + Tailwind (if chosen).
+- Create `useAuth` context and login/register pages.
+- Wire `site-time` polling and Dashboard skeleton to show lock-time countdown.
+
+
+Hosting
+ - Public site: `sbcctears.com` is hosted behind Cloudflare (DNS and CDN). This affects deployment, caching, and invalidation strategy:
+   - DNS and TLS are managed in Cloudflare; coordinate any API hostname or CNAME changes with ops before cutover.
+   - After any data-critical deploys or migration cutovers, perform Cloudflare cache purges for the affected paths (Dashboard, Reveal snapshot JSON endpoints, Entry pages) to avoid stale data being served from edge caches.
+   - If Cloudflare Workers, Page Rules, or Transform Rules are used, review them to ensure they don't interfere with API requests (preserve Authorization headers/cookies) or edge-caching of dynamic JSON responses.
+   - Set low TTLs for dynamic JSON endpoints during migration cutover and revert to longer TTLs afterward.
+
+
+Data Migration (GCS -> Supabase)
+Purpose
+ - Officially migrate all legacy JSON datasets currently stored in Google Cloud Storage (GCS) into the Supabase Postgres database as a single, audited migration event with verification and rollback guidance.
+
+High-level constraints
+ - Migration must be idempotent and produce deterministic results (multiple runs do not create duplicates or corrupt state).
+ - All migrated rows must be verified against counts and sample records; maintain an audit log of migration actions.
+ - Migration must be executed from a privileged migration runner (CI job or ops machine) that has a role capable of bypassing RLS for necessary writes, or a short-lived allow-policy will be added for the migration role.
+ - A full DB backup or logical export must be taken before the final migration run.
+
+Actors & Roles
+ - Migration Owner: Ops/Dev lead (responsible for scheduling, execution, rollback decision)
+ - Migration Runner: CI job or a machine/account with credentials to run the `scripts/import_from_gcs.py` import CLI with production `DATABASE_URL` and service credentials for GCS.
+ - Verifier: QA/Dev who validates record counts and spot-checks critical entities (users, entries, picks, weeks, games)
+
+Pre-migration steps (dry run)
+ 1. Create a migration plan doc with schedule, expected downtime window (if any), team contacts, and rollback criteria.
+ 2. Ensure `DATABASE_URL` for the target database is correct and points to the intended environment (staging or production).
+ 3. Run the import tooling in `--dry-run` mode against a copy of production data (or a staging DB seeded from prod) and capture the validation report.
+ 4. Validate the dry-run report: row counts per table, sample UUID/IDs, and ensure upsert deduplication logic matches expectations.
+ 5. Take a full logical backup of the target DB (pg_dump or Supabase managed backup) and export current GCS file list and checksums.
+
+Final migration run (production cutover)
+ 1. Schedule a migration window and announce to stakeholders; coordinate Cloudflare cache TTL lowering for dynamic endpoints.
+ 2. Put UI features that rely on mutating legacy data in read-only mode (if necessary) to avoid concurrent writes during cutover.
+ 3. Run the `scripts/import_from_gcs.py` CLI in final mode (no `--dry-run`) from the Migration Runner against production `DATABASE_URL` and the GCS bucket/path for the legacy data.
+ 4. Capture the migration logs and exit code; stream logs to a persisted storage location (S3/GCS/Supabase storage) for post-mortem.
+ 5. If the migration process detects inconsistencies or violates acceptance checks, stop and follow rollback criteria (see below).
+
+Acceptance criteria (post-migration)
+ - Row counts for key tables (users, entries, picks, games, weeks) match expected counts from the GCS manifest within an acceptable delta (list any allowed deltas here).
+ - No duplicate logical records (dedupe criteria validated for users by email / legacy id; entries/picks by composite unique keys).
+ - Spot checks of 20 random user records and 20 entries/picks show complete and correct mappings.
+ - API smoke test: run a small suite of API calls (login, list entries, fetch reveal snapshot) and verify responses for 5 sample users.
+ - Cloudflare cache purge completed and site shows live migrated data.
+
+Post-migration verification & monitoring
+ - Run automated integration tests (subset) and monitor error logs for 24–72 hours.
+ - Keep an audit table of migration runs (timestamp, runner, GCS manifest path, summary counts, success/failure).
+ - If any critical issues are found, trigger rollback: restore DB from backup, update audit log, and notify stakeholders.
+
+Rollback plan
+ - If critical failures are detected during verification, re-instate DB from the pre-migration backup.
+ - Revert service allow-policies (if any temporary migration policies were added).
+ - Re-run a targeted diagnostic dry-run in a staging environment to identify the root cause before repeating production migration.
+
+Operational checklist (pre-flight)
+ - Confirm `DATABASE_URL` and service credentials (who will run the migration and with what account).
+ - Ensure RLS policies allow the migration runner to write or that migration runner runs as a privileged role.
+ - Backup DB and export GCS manifest + checksums.
+ - Lower Cloudflare dynamic endpoint TTLs.
+ - Post-migration: purge Cloudflare caches for affected paths.
+
+Notes
+ - The existing `scripts/import_from_gcs.py` CLI was designed for idempotent imports and includes a `--dry-run` flag; use it for the dry-run validation and then the production run.
+ - Consider creating a small migration orchestration job in CI (GitHub Actions) to enforce backups, dry-run, final run, and verification steps under a single reproducible workflow.
+
+
+
