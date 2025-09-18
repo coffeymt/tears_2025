@@ -1,0 +1,4 @@
+[
+  {"season_year": 2025, "week_number": 1, "is_current": true, "lock_time": "2025-09-10T20:00:00Z"},
+  {"season_year": 2025, "week_number": 2, "is_current": false, "lock_time": "2025-09-17T20:00:00Z"}
+]

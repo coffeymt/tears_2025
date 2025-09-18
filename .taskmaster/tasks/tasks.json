@@ -592,7 +592,7 @@
           1,
           4
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -600,7 +600,7 @@
             "description": "Create the initial CLI script (`scripts/import_from_gcs`) with argument parsing for options like `--dry-run`. Implement the Google Cloud Storage client setup and authentication to list and download JSON files from the specified bucket.",
             "dependencies": [],
             "details": "The script should be able to connect to GCS, authenticate using service account credentials, and list the relevant JSON files (teams.json, users.json, etc.). It should parse command-line arguments, specifically a `--dry-run` flag that will be used in later subtasks.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -611,7 +611,7 @@
               "16.1"
             ],
             "details": "This subtask focuses on the simplest entities that have no foreign key dependencies on other imported data. The logic should handle parsing the JSON structure, mapping fields to the database schema, and performing the initial database insertions. Date/time strings for user creation must be converted to UTC.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -622,7 +622,7 @@
               "16.2"
             ],
             "details": "Games have foreign keys to the `teams` and `weeks` tables. The import logic must correctly resolve these relationships using the data imported in the previous step. All game times and week lock times must be parsed and stored in UTC.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -633,7 +633,7 @@
               "16.3"
             ],
             "details": "This is the most complex part of the data import due to multiple foreign key relationships. The script must look up the IDs of users, games, and weeks from the database to correctly populate the `entries` and `picks` tables.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -644,7 +644,7 @@
               "16.4"
             ],
             "details": "Modify all database insertion logic to check for existing records and update them if necessary, preventing duplicates on re-runs. The `--dry-run` mode should connect to GCS, parse all files, and print a detailed summary of actions (e.g., 'DRY-RUN: Would create 50 users', 'DRY-RUN: Would update 10 games') without committing any transactions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]

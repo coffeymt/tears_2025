@@ -1,0 +1,4 @@
+[
+  {"entry_name": "Alice Squad", "user_email": "alice@example.com", "season_year": 2025, "week_number": 1, "team_abbr": "JAX"},
+  {"entry_name": "Bob's Picks", "user_email": "bob@example.com", "season_year": 2025, "week_number": 1, "team_abbr": "WAS"}
+]
