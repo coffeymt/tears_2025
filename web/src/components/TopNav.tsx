@@ -20,6 +20,7 @@ export default function TopNav() {
 
         <nav className={`hidden md:flex items-center ${open ? 'block' : ''}`} aria-label="Main navigation">
           <Link to="/" className="mr-4">Home</Link>
+          <Link to="/dashboard" className="mr-4">Dashboard</Link>
           <Link to="/entries" className="mr-4">Entries</Link>
           <Link to="/account" className="mr-4">Account</Link>
           <Link to="/auth/login">Login</Link>

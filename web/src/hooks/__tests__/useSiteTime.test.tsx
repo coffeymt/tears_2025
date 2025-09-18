@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { vi, beforeEach, afterEach, describe, it, expect } from 'vitest'
 
 import useSiteTime from '../useSiteTime'
+import { act } from 'react-dom/test-utils'
 
 function HookHarness({ pollIntervalMs = 15000 }: { pollIntervalMs?: number }) {
   const { now, offsetMs, isLoading, error } = useSiteTime({ pollIntervalMs })
@@ -47,8 +48,10 @@ describe('useSiteTime', () => {
 
     render(<HookHarness />)
 
-    // allow effect to run
-    await vi.runOnlyPendingTimersAsync()
+    // allow effect to run (advance fake timers inside React act to avoid warnings)
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
 
     const offset = Number(screen.getByTestId('offset').textContent)
     expect(Math.abs(offset - 2000)).toBeLessThan(50)
@@ -68,7 +71,9 @@ describe('useSiteTime', () => {
     global.fetch.mockResolvedValueOnce({ ok: false, status: 500 })
     render(<HookHarness />)
 
-    await vi.runOnlyPendingTimersAsync()
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync()
+    })
 
     const loading = screen.getByTestId('loading').textContent
     const error = screen.getByTestId('error').textContent
