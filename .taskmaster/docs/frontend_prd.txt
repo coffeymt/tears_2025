@@ -1,3 +1,53 @@
+<context>
+# Overview
+SBCCTears is the SBCC NFL Survivor web app for players and admins: players register, manage entries, submit weekly picks, and view results post-lock; admins configure weeks/games, sync from ESPN, finalize scores, broadcast messages, and run imports. Hosted at `sbcctears.com` behind Cloudflare.
+
+# Core Features
+- Auth & Accounts: register/login, account profile, password reset.
+- Entries: create/list/rename/delete (with lock rules), payment flags.
+- Weekly Picks: submit/edit until lock; once-per-team enforcement; reveal after lock.
+- Weeks & Games: admin CRUD, lock time, ineligible teams, ESPN sync, score finalize.
+- Dashboard & Reveal: current week summary, countdown, distribution and games view.
+- History Matrix: season matrix with leaderboard and team usage.
+- Admin Console: weeks/games, users, entries, imports, broadcast.
+- Data Migration: official GCS → Supabase migration flow with dry-run, backup, cutover, verification.
+
+# User Experience
+- Personas: Player; Admin/Commissioner.
+- Key flows: Sign up, Login, Forgot/Reset; Create entries; Weekly pick submission with pre-lock edits; Sunday reveal views; Admin: manage weeks/games/picks, sync/finalize, broadcast, import.
+- UX notes: Mobile-first; clear lock countdown; reveal badge after lock; disabled controls pre-lock or without permissions; accessible forms/tables.
+</context>
+
+<PRD>
+# Technical Architecture
+- Frontend: React 18 + Vite + TypeScript; React Router v6; React Query for server state; React Hook Form + Zod; optional Tailwind CSS; Axios API client with auth interceptors; feature flags via simple Context.
+- Hosting: `sbcctears.com` on Cloudflare (DNS/TLS/CDN). Purge caches on data-critical deploys/migrations; preserve auth headers; tune TTLs for dynamic JSON during cutovers.
+- Auth: Prefer HttpOnly cookie JWT; fallback Authorization header if required by backend; refresh tokens if supported.
+- APIs: FastAPI backend under `/api/*` and internal `/internal/*` for scheduler/admin-only operations.
+- Data: Supabase Postgres; RLS enabled; backend enforces auth/authorization.
+- Jobs: ESPN sync and finalize services callable via internal endpoints; optional Cloud Scheduler.
+
+# Development Roadmap
+- MVP: Auth, Dashboard, Entries, Picks flow, Reveal snapshot integration, Account, Forgot/Reset, Admin Weeks & Locks basics, ESPN sync minimal.
+- Phase 2: Admin Users, Admin Broadcast, History Matrix + Leaderboard + Usage, per-game locks UI, randomize helpers, payment UI improvements, import UI.
+- Phase 3: Performance polish (indexes/materialized views), RLS hardening, A11y polish, advanced analytics, Storybook (optional).
+
+# Logical Dependency Chain
+1) Auth & Teams baseline → 2) Weeks & Games + site time → 3) Entries & Picks (validations/lock rules) → 4) Reveal & Dashboard → 5) Admin Console (weeks/games/users/broadcast/import) → 6) History Matrix & analytics.
+
+# Risks and Mitigations
+- Data integrity: server validations + DB constraints; idempotent upserts; tests for lock and season once-per-team rules.
+- Reveal correctness/privacy: enforce lock-time checks on server; snapshot without PII; gated endpoints.
+- ESPN reliability: admin overrides; overwrite-per-week sync; normalization map.
+- Timezone drift: server site-time endpoint; all storage in UTC; localize on display.
+- Scaling: proper indexes; consider materialized views; light snapshots only if needed.
+- Security: JWT storage best practices; admin guards; rate limiting; RLS with service role for backend; Cloudflare cache safety.
+- Migration: pre-backup, dry-run, controlled cutover; rollback plan and audit log.
+
+# Appendix
+- See detailed sections below for pages/components, API mappings, hosting, and migration procedures.
+</PRD>
+
 Frontend PRD — Tears (React)
 
 Purpose
@@ -42,6 +92,8 @@ Pages & Routes
   - Public weeks listing with lock times; admin link to manage.
 - /weeks/:weekId/reveal
   - Reveal snapshot: games list, pick distribution (counts), leaderboard, alive counts. Restricted: only shown after lock_time.
+- /history
+  - Season history matrix with tabs for Matrix, Leaderboard, and Team Usage. Virtualized grid for performance.
 - /admin (Admin console)
   - Sub routes:
     - /admin/weeks — CRUD for weeks, set current week, lock time UI.
@@ -113,6 +165,69 @@ Deployment & CI
   - Build: `pnpm build` produces artifacts
   - Deploy: on merge to `main` deploy to preview environment (auto) and production on tag.
 - Environment variables for build: `REACT_APP_API_BASE`, `SENTRY_DSN` (optional), `VITE_*` prefixed for Vite.
+
+API → UI mapping (coverage of backend APIs)
+- Public
+  - `GET /api/health` → Health check page or startup ping in `api.ts` (optional).
+  - `GET /api/teams` → TeamGrid, picks UI eligibility, Admin Weeks forms.
+  - `GET /api/weeks` → Dashboard week list; Weeks page; History Matrix.
+  - `GET /api/weeks/current` → Dashboard default week; Picks page routing.
+  - `GET /api/weeks/completed` → Weeks list and History Matrix filters.
+  - `GET /api/weeks/:weekId/games` → Reveal component games table; Admin Games editor; Dashboard widget.
+  - `GET /api/weeks/:weekId/picks` → Admin Picks table; optional Reveal picks table when allowed.
+  - `GET /api/weeks/:id/reveal-full` → Reveal component (preferred after lock).
+  - `GET /api/weeks/:id/reveal-snapshot` → Reveal fallback when full not available.
+  - `GET /api/history` → History Matrix summary/leaderboard.
+  - `GET /api/history/matrix` → Grid/History Matrix main data source.
+  - `GET /api/site-time` → `useSiteTime` hook for countdowns and pre/post-lock logic.
+- Auth/User
+  - `POST /api/auth/register` → Auth Register form.
+  - `POST /api/auth/login` → Auth Sign-in; stores token/session.
+  - `GET /api/auth/me` → App bootstrap; ProtectedRoute decisions; Account page.
+  - `POST /api/auth/logout` → Account/TopNav logout.
+  - `PATCH /api/account` → Account mobile/profile update.
+  - `POST /api/password-reset/request` → Forgot Password page.
+  - `POST /api/password-reset/submit` → Reset Password page.
+  - `GET /api/users/by-email/:email` → Admin Users search or validation helper.
+- Entries/Picks
+  - `POST /api/entries` → Entries create.
+  - `GET /api/users/:userId/entries` → Dashboard and Entries page list.
+  - `PATCH /api/entries/:id` → Rename/edit entry.
+  - `DELETE /api/entries/:id` → Delete entry (pre-lock constraints).
+  - `GET /api/entries/:entryId/picks` → Picks history for an entry.
+  - `POST /api/picks` → Submit pick.
+  - `PATCH /api/picks/:id` → Edit pick (pre-lock).
+  - `DELETE /api/picks/:id` → Clear pick (pre-lock).
+- Admin
+  - `POST /api/weeks` → Admin Weeks create.
+  - `PATCH /api/weeks/:id` → Update lock time, ineligible teams.
+  - `DELETE /api/weeks/:id` → Remove week (admin-only).
+  - `POST /api/admin/set-current-week` → Set current week.
+  - `GET /api/weeks/:weekId/games` → Admin Games table load.
+  - `POST /api/weeks/:weekId/games` → Add game to week.
+  - `PATCH /api/games/:id` → Edit/lock game or update scores.
+  - `POST /api/admin/picks/override` → Admin override pick.
+  - `DELETE /api/admin/picks/:id` → Admin clear pick.
+  - `POST /api/admin/weeks/:weekId/randomize-picks` → Test utility.
+  - `POST /api/admin/weeks/:weekId/randomize-scores` → Test utility.
+  - `POST /api/admin/weeks/:weekId/finalize-scores` → Finalize & recompute.
+  - `GET /api/admin/entries` → Admin Entries listing.
+  - `PATCH /api/admin/entries/:entryId` → Edit entry admin fields.
+  - `DELETE /api/admin/entries/:entryId` → Delete entry (admin).
+  - `PATCH /api/admin/entries/:entryId/payment` → Mark payment status.
+  - `PATCH /api/admin/entries/:entryId/elimination` → Mark elimination.
+  - `POST /api/admin/users` → Create admin user.
+  - `GET /api/admin/users` → Admin Users listing.
+  - `PATCH /api/admin/users/:userId` → Update user.
+  - `POST /api/admin/users/:userId/password` → Reset password (admin action).
+  - `DELETE /api/admin/users/:userId` → Delete user.
+  - `POST /api/admin/broadcast` → Admin Broadcast send.
+  - `GET /api/admin/settings` → Load admin settings.
+  - `PATCH /api/admin/settings` → Update admin settings.
+- Internal (triggered via admin UI or scheduler; token protected)
+  - `POST /internal/sync-games/espn` → Initiated by Admin Weeks sync control (via backend proxy/admin endpoint).
+  - `POST /internal/aggregate/week` → Optional manual aggregate action from admin.
+  - `POST /internal/snapshots/user/:userId` → Optional per-user snapshot generation.
 
 Developer DX
 - Repo layout: `web/` for frontend; include `README.md` explaining local dev (`pnpm install`, `pnpm dev`), test commands, and env file sample.
