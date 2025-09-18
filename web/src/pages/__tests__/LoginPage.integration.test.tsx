@@ -30,7 +30,7 @@ describe('LoginPage integration', () => {
     )
 
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'a@b.com' } })
-    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'pw' } })
+  fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'pw12345' } })
     fireEvent.click(screen.getByRole('button', { name: /log in/i }))
 
     await waitFor(() => expect(localStorage.getItem('token')).toBe('tok'))

@@ -3,6 +3,9 @@ import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 
 export default function App() {
   return (
@@ -10,6 +13,9 @@ export default function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<HomePage />} />
         <Route path="auth/login" element={<LoginPage />} />
+  <Route path="auth/register" element={<RegisterPage />} />
+  <Route path="auth/forgot-password" element={<ForgotPasswordPage />} />
+  <Route path="auth/reset-password" element={<ResetPasswordPage />} />
         {/* protected and admin routes will be added in later subtasks */}
       </Route>
     </Routes>
