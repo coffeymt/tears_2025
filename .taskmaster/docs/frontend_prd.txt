@@ -257,6 +257,87 @@ Hosting
    - If Cloudflare Workers, Page Rules, or Transform Rules are used, review them to ensure they don't interfere with API requests (preserve Authorization headers/cookies) or edge-caching of dynamic JSON responses.
    - Set low TTLs for dynamic JSON endpoints during migration cutover and revert to longer TTLs afterward.
 
+Cloudflare Deploy & Test (Workers / Pages)
+Purpose
+ - Provide a safe, repeatable process to deploy the new frontend to Cloudflare Workers or Pages for testing without interrupting the existing production site (`sbcctears.com`) which is served from a different repository.
+
+High-level approach
+ - Deploy the new frontend to a separate Cloudflare environment (Worker route or Pages preview) with a staging subdomain (e.g., `staging.sbcctears.com` or `frontend-staging.sbcctears.com`) or use a unique preview URL provided by Cloudflare Pages/Workers for each deploy.
+ - Use Cloudflare DNS and Page Rules to keep the live `sbcctears.com` untouched during testing. Only promote DNS or change routes after all smoke tests pass.
+
+Prerequisites
+ - Cloudflare account with access to the `sbcctears.com` zone and permissions to create Workers, Pages, DNS entries, and deploy keys.
+ - API token with appropriate permissions for automated deploys (Workers Scripts, Pages Deployments, DNS edit, Cache Purge).
+ - A separate origin or route for staging (e.g., Cloudflare Pages preview or a `staging.` subdomain pointing to the new hosting location).
+
+Step-by-step deploy & test (manual)
+1. Create a staging subdomain: add DNS CNAME `staging.sbcctears.com` -> Cloudflare Pages or the preview host for Workers if required. Do not modify `sbcctears.com` production DNS or routes.
+2. Build the frontend artifacts locally:
+  - For Vite (pnpm):
+```powershell
+pnpm install
+pnpm build
+```
+3. Deploy to Cloudflare Pages or upload Worker script/asset bundle:
+  - Pages: create a Pages project in Cloudflare, connect to repo or upload build artifacts; configure environment variables (`VITE_API_BASE`, etc.) for the staging deploy.
+  - Worker: use `wrangler` to publish the Worker to a staging route or preview:
+```powershell
+npm i -g wrangler
+# Authenticate (one-time)
+wrangler login
+# Publish to a preview environment or named worker
+wrangler publish --env staging
+```
+4. Configure staging environment variables and secrets in Cloudflare (Pages/Workers): `VITE_API_BASE`, `SENTRY_DSN`, any feature flags, and the site-time endpoint URL.
+5. Run a smoke test suite against the staging URL (automated or manual):
+  - Smoke tests (manual): open `https://staging.sbcctears.com` and run through: Login, Dashboard load, Entries list, Submit a pick (dry-run/test user), Reveal snapshot fetch, Admin sync trigger (if staging backend is available).
+  - Automated smoke tests (recommend Playwright): run a small E2E script against the staging URL checking critical flows (login, entries list, submit pick, reveal snapshot). Use GitHub Actions to run this after deploy.
+6. Validate Cloudflare behavior:
+  - Ensure response headers for dynamic JSON endpoints include cache-control directives matching staging TTL settings.
+  - Verify no edge caching of endpoints that require fresh server data unless explicitly allowed.
+7. After smoke tests pass, keep staging running for additional QA or promoted to production following the promotion checklist below.
+
+Promotion checklist (to move new frontend live)
+1. Confirm final migration & DB readiness (if migration required) and that DNS changes will not cause downtime.
+2. Take final backup and record of production settings.
+3. If using Cloudflare Workers routes, update routes to point to the new Worker script (do NOT remove the existing service until traffic has been verified). For Pages, update production branch deploy settings.
+4. Purge Cloudflare caches for affected paths immediately after promotion.
+5. Run smoke tests on `https://sbcctears.com` (or a small subset that validates key flows) to verify live behavior.
+6. Monitor logs and metrics (errors, 5xx, auth failures) for at least 15–60 minutes, and watch for user reports.
+
+Automating deploys & tests (recommended)
+ - Create a GitHub Actions workflow that:
+  1. Builds the site on PR or merge to a staging branch.
+  2. Deploys to Cloudflare Pages or Workers using Cloudflare API token and `wrangler`/Pages API.
+  3. Runs Playwright smoke tests against the preview/staging URL.
+  4. If smoke tests pass, optionally open a PR or create a GitHub release candidate for manual promotion to production.
+
+Security & production safety
+ - NEVER update the production `sbcctears.com` DNS or routes automatically from a PR deployment; require explicit manual promotion.
+ - Use separate Cloudflare API tokens for CI (scoped) and for human operators (broader scope), and store tokens in GitHub Secrets.
+ - To prevent token leakage, do not log the token in CI logs; restrict Secrets access to required workflows.
+
+Cloudflare cache purge guidance
+ - Use the Cloudflare API to purge specific URL patterns after promotion or migration:
+```powershell
+# Purge by URL
+curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
+  -H "Authorization: Bearer $CF_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"files":["https://sbcctears.com/","https://sbcctears.com/api/weeks/current"]}'
+```
+
+Rollback guidance
+ - If issues are detected after promotion, revert routes to the previous Worker/Pages deploy (Cloudflare preserves prior versions) or restore DNS CNAME to previous target.
+ - Immediately purge caches after rollback and run the sanity smoke tests again.
+
+Acceptance criteria for Cloudflare test deploys
+ - Staging URL loads without mixed-content or CORS errors.
+ - Login & Dashboard flows work for a test user within 2–5s on average.
+ - Reveal snapshot endpoint returns expected JSON and renders in the Reveal component.
+ - Edge cache headers are consistent with staging TTLs and do not cache dynamic endpoints longer than intended.
+ - Production `sbcctears.com` remains unaffected during the entire process.
+
 
 Data Migration (GCS -> Supabase)
 Purpose
