@@ -1,9 +1,9 @@
 {
 	"meta": {
-		"generatedAt": "2025-09-14T23:40:46.371Z",
-		"tasksAnalyzed": 16,
-		"totalTasks": 16,
-		"analysisCount": 16,
+		"generatedAt": "2025-09-18T04:55:41.210Z",
+		"tasksAnalyzed": 24,
+		"totalTasks": 24,
+		"analysisCount": 24,
 		"thresholdScore": 5,
 		"projectName": "Taskmaster",
 		"usedResearch": false
@@ -11,131 +11,195 @@
 	"complexityAnalysis": [
 		{
 			"taskId": 1,
-			"taskTitle": "Project Scaffolding and Database Schema Setup",
-			"complexityScore": 5,
+			"taskTitle": "Scaffold React Frontend with Vite and TypeScript",
+			"complexityScore": 2,
 			"recommendedSubtasks": 4,
-			"expansionPrompt": "Expand this task into four subtasks: 1. Initialize the FastAPI project with a standard directory structure. 2. Implement database connection logic and environment variable handling. 3. Define all specified SQLAlchemy ORM models. 4. Set up Alembic and create the initial database migration script.",
-			"reasoning": "The complexity comes from integrating multiple foundational technologies (FastAPI, SQLAlchemy, Alembic, Supabase). While each step is standard, ensuring they work together correctly requires careful setup. Breaking it down ensures each component is configured properly."
+			"expansionPrompt": "Break down the task of scaffolding the React frontend into subtasks for each major tool: Vite initialization, Tailwind CSS configuration, ESLint setup, and Prettier integration.",
+			"reasoning": "Low complexity as it involves standard boilerplate and configuration of well-known tools. The steps are discrete and can be broken down easily for clear progress tracking."
 		},
 		{
 			"taskId": 2,
-			"taskTitle": "Implement User Authentication Endpoints",
-			"complexityScore": 6,
-			"recommendedSubtasks": 0,
-			"expansionPrompt": "This task is already well-expanded into three logical subtasks covering registration, login/JWT, and the protected endpoint. No further expansion is needed.",
-			"reasoning": "Authentication is a critical and moderately complex feature involving cryptography, token management, and security patterns. The existing three subtasks provide a perfect, logical breakdown of the required work."
+			"taskTitle": "Implement Core Layout, Routing, and Protected Routes",
+			"complexityScore": 4,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Expand the task of implementing core layout and routing into subtasks for: setting up React Router, creating the main `Layout` component with `TopNav` and `Footer`, building the `ProtectedRoute` component, and building the `AdminRoute` component.",
+			"reasoning": "Moderate complexity due to the combination of UI layout, routing setup, and authentication/authorization logic. The protected route components introduce state management dependencies and conditional rendering logic."
 		},
 		{
 			"taskId": 3,
-			"taskTitle": "Develop Password Reset Flow with Email Integration",
-			"complexityScore": 7,
-			"recommendedSubtasks": 0,
-			"expansionPrompt": "This task is already well-expanded into three logical subtasks covering the token model, the request endpoint, and the submit endpoint. No further expansion is needed.",
-			"reasoning": "This task's complexity is high due to the interaction between multiple systems (API, database, external email service) and the critical security nature of the workflow. The existing breakdown is excellent and covers all major components."
+			"taskTitle": "Setup Centralized API Client with Axios and Auth Interceptors",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down the setup of the centralized API client into subtasks for: creating the base Axios instance with environment variable configuration, implementing the request interceptor to attach JWTs, and implementing the response interceptor for global error handling (e.g., 401 Unauthorized).",
+			"reasoning": "Medium complexity because it's a critical, non-UI infrastructure task. Correctly implementing interceptors for auth token attachment and global error handling (especially 401s for logout/refresh) is crucial and error-prone."
 		},
 		{
 			"taskId": 4,
-			"taskTitle": "Seed Canonical NFL Teams Data",
-			"complexityScore": 2,
-			"recommendedSubtasks": 0,
-			"expansionPrompt": "This task is simple and well-defined. The existing single subtask is sufficient. No further expansion is needed.",
-			"reasoning": "This is a straightforward data-loading task with very low complexity. The primary requirement is writing an idempotent script, which is a minor challenge. The task is too small to warrant further breakdown."
+			"taskTitle": "Implement Authentication Context and Hooks",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Expand the implementation of the authentication context into subtasks for: defining the context type and provider structure, creating the `login` and `register` functions with API integration, implementing the `logout` function and state cleanup, and adding logic to fetch the current user on initial application load.",
+			"reasoning": "Medium-high complexity. This is a foundational piece of the application's state management. It requires careful design of the context's state shape and API, handling async operations, and managing loading/error states that will affect the entire UI."
 		},
 		{
 			"taskId": 5,
-			"taskTitle": "Implement Admin Weeks Management API",
-			"complexityScore": 4,
-			"recommendedSubtasks": 3,
-			"expansionPrompt": "Expand this task into three subtasks: 1. Implement a reusable admin authorization dependency. 2. Develop the standard CRUD endpoints for the 'weeks' resource. 3. Implement the specific business logic for the 'set-current-week' endpoint.",
-			"reasoning": "The task combines standard CRUD with an authorization layer and a specific business rule (only one current week). Separating the concerns of authorization, basic data management, and the special business logic endpoint makes implementation clearer."
+			"taskTitle": "Build Authentication Pages and Forms",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the task of building authentication pages into subtasks for each page: Login, Registration, Forgot Password, and Reset Password. Each subtask should include creating the UI, setting up the form with React Hook Form and Zod, and integrating with the `useAuth` context.",
+			"reasoning": "Medium-high complexity due to the volume of work (four separate forms/pages) and the integration of multiple technologies: UI components, routing, form management (`react-hook-form`), schema validation (`zod`), and state management (`useAuth`)."
 		},
 		{
 			"taskId": 6,
-			"taskTitle": "Develop Internal ESPN Game Sync Job",
-			"complexityScore": 7,
-			"recommendedSubtasks": 4,
-			"expansionPrompt": "Expand this task into four subtasks: 1. Create the secure internal endpoint. 2. Implement the ESPN API client to fetch game data. 3. Develop the service to transform and normalize the API response. 4. Implement the transactional database logic to sync the games.",
-			"reasoning": "Complexity is high due to the external API dependency, data transformation logic, and the need for a robust database update strategy. Breaking it down isolates the API client, data mapping, and DB persistence logic, which is a good pattern for ETL-style tasks."
+			"taskTitle": "Implement `useSiteTime` Hook for Server-Synced Time",
+			"complexityScore": 4,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Expand the `useSiteTime` hook implementation into subtasks for: fetching the initial server time and calculating the client-server offset, setting up an interval to provide a continuously updating time value based on the offset, and handling cleanup of the interval.",
+			"reasoning": "Moderate complexity for a custom hook. The logic involves managing side effects (`setInterval`), performing an initial async fetch, and correctly calculating and applying a time offset, which is more complex than a simple data-fetching hook."
 		},
 		{
 			"taskId": 7,
-			"taskTitle": "Implement Player Entries Management API",
-			"complexityScore": 5,
-			"recommendedSubtasks": 0,
-			"expansionPrompt": "This task is already well-expanded into three logical subtasks covering create/list, update/delete with locking, and uniqueness validation. No further expansion is needed.",
-			"reasoning": "This task involves standard CRUD but is complicated by ownership checks and time-based business rules. The existing subtasks correctly separate the basic operations from the more complex validation and locking logic."
+			"taskTitle": "Develop the Main Dashboard Page",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the development of the main dashboard into subtasks for: creating the overall page layout, building the `WeekCard` component including the countdown powered by `useSiteTime`, building the `EntryCard` component to display entry summaries, and integrating the necessary React Query hooks to fetch week and entry data.",
+			"reasoning": "Medium-high complexity as it's a composite view that integrates multiple data sources (weeks, entries) and custom logic (the `useSiteTime` countdown). It requires careful data fetching strategy and component composition."
 		},
 		{
 			"taskId": 8,
-			"taskTitle": "Implement Weekly Pick Submission API",
-			"complexityScore": 8,
-			"recommendedSubtasks": 0,
-			"expansionPrompt": "This task is already well-expanded into four granular subtasks, each addressing a specific validation rule. No further expansion is needed.",
-			"reasoning": "This is one of the most complex business logic tasks, involving multiple, layered validation rules that query different parts of the database. The existing granular breakdown is ideal for tackling this complexity systematically."
+			"taskTitle": "Build User Account Management Page",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Expand the user account management page into subtasks for: fetching and displaying current user data, building the profile update form, building the password change form, and implementing the UI for notification preferences.",
+			"reasoning": "Medium complexity. It involves fetching initial data to populate forms, implementing two separate forms with validation (`react-hook-form`, `zod`), and handling API mutations for updates. It's a standard but non-trivial feature."
 		},
 		{
 			"taskId": 9,
-			"taskTitle": "Develop Game Finalization and Pick Resolution Logic",
-			"complexityScore": 8,
-			"recommendedSubtasks": 0,
-			"expansionPrompt": "This task is already well-expanded into four sequential subtasks that mirror the required workflow. No further expansion is needed.",
-			"reasoning": "This is a complex batch processing task that affects multiple entities and determines game outcomes. The sequential, dependent nature of the steps adds to the complexity. The existing breakdown mirrors this workflow perfectly."
+			"taskTitle": "Implement Entries Management Page",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the entries management page into subtasks for: fetching and displaying the list of user entries, implementing the 'Create New Entry' modal and form, adding functionality to rename an entry, and adding functionality to delete an entry with a confirmation dialog.",
+			"reasoning": "High complexity due to it being a full CRUD interface. It requires managing a list view, modal states for creation/editing, handling multiple mutations (create, update, delete), and ensuring the UI updates correctly using React Query's cache invalidation."
 		},
 		{
 			"taskId": 10,
-			"taskTitle": "Implement Public Pre-Reveal and Site Time Endpoints",
-			"complexityScore": 2,
-			"recommendedSubtasks": 3,
-			"expansionPrompt": "Expand this task into three subtasks, one for each required public endpoint: `/api/weeks/current`, `/api/teams`, and `/api/site-time`.",
-			"reasoning": "The task is simple, involving basic read-only data fetching with no authentication or complex logic. Breaking it down by endpoint is a straightforward way to organize the work for parallel development if needed."
+			"taskTitle": "Develop Weekly Pick Submission UI",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand the pick submission UI task into subtasks for: fetching all teams and the entry's pick history, building the main `TeamGrid` component, implementing the logic to disable already-picked teams, creating the confirmation modal, and setting up the React Query mutation for submitting/editing the pick with optimistic updates.",
+			"reasoning": "High complexity due to the intricate UI logic. It requires merging data from multiple endpoints to determine the state of each grid item, managing selection state, and implementing a sophisticated mutation with optimistic updates for a good user experience."
 		},
 		{
 			"taskId": 11,
-			"taskTitle": "Implement Post-Reveal Data Endpoints",
-			"complexityScore": 4,
-			"recommendedSubtasks": 3,
-			"expansionPrompt": "Expand this task into three subtasks: 1. Implement the endpoint structure with the time-based lock validation. 2. Develop the database aggregation query for the pick distribution. 3. Implement the logic to assemble and return the final snapshot payload.",
-			"reasoning": "The complexity lies in the combination of a time-based access control rule and a database aggregation query. Separating the access logic from the data query and final data assembly is a clean way to structure the implementation."
+			"taskTitle": "Implement Reveal Snapshot Page",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the reveal page implementation into subtasks for: creating the components for the `GamesList`, `DistributionChart`, and `Leaderboard`, fetching the aggregated reveal data, and implementing the logic to restrict page access until after the weekly lock time.",
+			"reasoning": "Medium-high complexity. It requires fetching and rendering three distinct and potentially large datasets (games, distribution, leaderboard). Integrating a charting library and ensuring the page is only accessible after the lock time adds to the complexity."
 		},
 		{
 			"taskId": 12,
-			"taskTitle": "Create Player Dashboard Aggregation API",
-			"complexityScore": 5,
-			"recommendedSubtasks": 0,
-			"expansionPrompt": "This task is already well-expanded into four logical subtasks that cover schema definition, data fetching, and final assembly. No further expansion is needed.",
-			"reasoning": "Aggregation endpoints can be complex to implement efficiently. The task involves fetching and merging data from multiple sources. The existing breakdown follows a logical implementation path: define the contract, build the pieces, then assemble them."
+			"taskTitle": "Scaffold Admin Console with Protected Routes",
+			"complexityScore": 3,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Expand the admin console scaffolding task into subtasks for: creating a new `AdminLayout` component with a sidebar, defining the nested routes for all admin pages (`/weeks`, `/users`, etc.), and applying the `AdminRoute` wrapper to protect the entire `/admin` section.",
+			"reasoning": "Low complexity as it primarily involves creating a new layout component and configuring routes. The critical security logic is reused from the `AdminRoute` component, making this task mostly structural."
 		},
 		{
 			"taskId": 13,
-			"taskTitle": "Build Admin User and Entry Management APIs",
-			"complexityScore": 5,
-			"recommendedSubtasks": 3,
-			"expansionPrompt": "Expand this task into three subtasks: 1. Develop the user management endpoints. 2. Develop the entry listing and filtering endpoint. 3. Develop the specific endpoints for manually overriding entry payment and elimination status.",
-			"reasoning": "The task covers management of two different resources (users, entries) with distinct functionalities. Grouping the work by resource and function provides a clear separation of concerns for the implementation."
+			"taskTitle": "Build Admin UI for Weeks and Games Management",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the admin weeks/games UI into subtasks for: building the main page to list all weeks with CRUD actions, creating the form/modal for creating and editing a week, building the nested page for managing games within a specific week, creating the editable table for game CRUD, and implementing the ESPN sync functionality.",
+			"reasoning": "High complexity. This involves building two separate, full CRUD interfaces for related data models. The UI requires tables, modals, complex forms with date pickers, and a special action to trigger a backend process, making it a substantial piece of work."
 		},
 		{
 			"taskId": 14,
-			"taskTitle": "Implement Admin Broadcast Email System",
-			"complexityScore": 6,
-			"recommendedSubtasks": 3,
-			"expansionPrompt": "Expand this task into three subtasks: 1. Create the secure admin broadcast endpoint. 2. Implement the service logic to build the recipient list based on the specified filter. 3. Implement the email sending logic that iterates through the list and integrates with the email service.",
-			"reasoning": "The complexity comes from combining authorization, dynamic database querying, and iterating over an external service call (email). Breaking it down separates the API layer, the recipient-finding logic, and the actual email sending process."
+			"taskTitle": "Develop History Matrix, Leaderboard, and Usage Page",
+			"complexityScore": 8,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Expand the history page task into subtasks for: creating the tabbed layout, implementing the main matrix view using a virtualization library, building the season leaderboard tab, and building the team usage statistics tab. Each tab should handle its own data fetching.",
+			"reasoning": "High complexity, primarily due to the requirement of implementing a virtualized matrix for performance. Virtualization libraries add a significant implementation and debugging overhead. The other two tabs are simpler but still contribute to the overall workload."
 		},
 		{
 			"taskId": 15,
-			"taskTitle": "Develop Season History Matrix API",
-			"complexityScore": 7,
-			"recommendedSubtasks": 0,
-			"expansionPrompt": "This task is already well-expanded into four subtasks that correctly prioritize schema definition, initial implementation, performance optimization, and final assembly. No further expansion is needed.",
-			"reasoning": "The primary challenge of this task is database performance at scale. A naive implementation could be very slow. The existing subtasks wisely separate the initial functional implementation from the critical performance tuning step."
+			"taskTitle": "Build Admin UI for User Management",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the admin user management UI into subtasks for: building the main data table to display a paginated list of users, implementing the search and filter inputs that trigger new API calls, adding the functionality to toggle a user's admin role, and adding the functionality to trigger a password reset for a user.",
+			"reasoning": "Medium-high complexity. Implementing a data table with server-side pagination and filtering is a non-trivial task that requires managing query parameters and state carefully. Adding per-row mutations adds to the interactive complexity."
 		},
 		{
 			"taskId": 16,
-			"taskTitle": "Create Legacy Data Import Tooling from GCS",
-			"complexityScore": 9,
-			"recommendedSubtasks": 0,
-			"expansionPrompt": "This task is already well-expanded into five sequential subtasks that correctly handle the dependencies between data models. No further expansion is needed.",
-			"reasoning": "Data migration is notoriously complex. This task involves an external dependency (GCS), strict ordering requirements to maintain referential integrity, data transformation, and idempotency. The existing breakdown correctly tackles the problem in layers of increasing dependency."
+			"taskTitle": "Build Admin UI for Broadcast Messages",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Expand the admin broadcast UI into subtasks for: building the main form with subject and recipient filter controls, integrating a rich text editor for the message body, implementing the 'Preview' functionality to render a sample email, and implementing the 'Send' functionality with a confirmation modal.",
+			"reasoning": "Medium-high complexity. Integrating a rich text editor adds a layer of complexity. The workflow involving recipient filtering, previewing the message, and a final confirmation step makes it a multi-stage process to implement."
+		},
+		{
+			"taskId": 17,
+			"taskTitle": "Develop UI for GCS Data Migration",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down the data migration UI into subtasks for: creating the main component with controls for 'Dry Run' and 'Final Import', implementing the logic to call the migration API and handle loading/error states, and designing and building the component to clearly display the validation report from the API response.",
+			"reasoning": "Medium complexity. While the UI controls are simple, the core of the task is to fetch, parse, and render a potentially complex validation report from the backend. The high-stakes nature of the operation requires a very clear and robust UI for displaying results."
+		},
+		{
+			"taskId": 18,
+			"taskTitle": "Set Up Unit & Integration Testing with Vitest",
+			"complexityScore": 4,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Expand the Vitest setup task into subtasks for: installing and configuring Vitest, `jsdom`, and React Testing Library; writing initial unit tests for pure utility functions; and writing the first integration tests for a key hook (`useSiteTime`) and a simple component.",
+			"reasoning": "Moderate complexity. Setting up the testing environment from scratch, including configuration and establishing testing patterns for the project, requires specific expertise beyond typical feature development."
+		},
+		{
+			"taskId": 19,
+			"taskTitle": "Set Up E2E Testing with Playwright",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down the Playwright setup into subtasks for: installing and configuring Playwright for the project; writing the first test suite for the authentication flow (registration and login); and writing a test suite for the core user journey of submitting a weekly pick.",
+			"reasoning": "Medium complexity. E2E test setup and writing the first few stable tests for critical user flows is challenging. It requires a different skillset than component development, involving browser automation, selectors, and managing test data."
+		},
+		{
+			"taskId": 20,
+			"taskTitle": "Configure CI/CD Pipeline with GitHub Actions",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Expand the CI/CD pipeline configuration into subtasks for: creating the initial workflow file triggered on pull requests; adding a job for static analysis (linting, type-checking); adding a separate job for running unit tests; and adding a final job to create a production build.",
+			"reasoning": "Medium complexity. Requires specific knowledge of GitHub Actions syntax and concepts. Properly configuring jobs, steps, caching dependencies, and integrating with PR status checks is a specialized DevOps task."
+		},
+		{
+			"taskId": 21,
+			"taskTitle": "Configure Cloudflare for Staging and Production Deployments",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down the Cloudflare configuration into subtasks for: creating the Cloudflare Pages project and linking it to the GitHub repository; configuring distinct deployment settings and environment variables for production and staging branches; and updating the GitHub Actions workflow to deploy to Cloudflare.",
+			"reasoning": "Medium complexity. This is a crucial DevOps task that involves configuring cloud infrastructure. It requires understanding deployment environments, build settings, environment variable management, and integrating the CI/CD pipeline with the cloud provider."
+		},
+		{
+			"taskId": 22,
+			"taskTitle": "Execute GCS to Supabase Data Migration",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand the data migration execution plan into sequential subtasks: schedule the migration window and communicate downtime, perform a final database backup, execute the migration script in dry-run mode and validate the report, execute the final migration script, and perform all post-migration verification checks.",
+			"reasoning": "High complexity due to the high risk and operational nature of the task. The score reflects the criticality of the procedure, the need for meticulous execution of a pre-defined plan, and the potential impact of failure, not the coding effort."
+		},
+		{
+			"taskId": 23,
+			"taskTitle": "Accessibility (A11y) Polish and Validation",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the accessibility polish into subtasks for: conducting an automated audit using tools like axe-core, performing a complete manual keyboard navigation audit of all user flows, remediating all identified issues related to semantic HTML and ARIA attributes, and fixing focus management and color contrast problems.",
+			"reasoning": "High complexity because it's a cross-cutting concern that touches almost every component. It requires specialized knowledge (WCAG, ARIA), manual testing, and can involve significant refactoring of existing components."
+		},
+		{
+			"taskId": 24,
+			"taskTitle": "Performance Optimization and Final Polish",
+			"complexityScore": 8,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Expand the performance optimization task into subtasks for: profiling the application to identify rendering bottlenecks and slow network requests, implementing route-based code splitting with `React.lazy`, reviewing and optimizing React Query configurations, and analyzing the production bundle to reduce its size.",
+			"reasoning": "High complexity. Performance optimization is an advanced topic that requires specialized tools (profilers, bundle analyzers) and expertise. Identifying bottlenecks and implementing effective solutions like code-splitting is non-trivial."
 		}
 	]
 }
