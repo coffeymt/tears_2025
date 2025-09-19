@@ -84,8 +84,7 @@ export default function Picks() {
   function handleConfirm() {
     if (!selectedTeam) return
 
-    // call mutation to submit pick (optimistic update handled in mutation hooks)
-    console.log('[Picks] handleConfirm mutate', { entryId: entryId || '', teamId: selectedTeam.id })
+    // no-op: removed debug logging that noisy tests
     submitPickMutation.mutate({ entryId: entryId || '', teamId: selectedTeam.id })
   }
 
