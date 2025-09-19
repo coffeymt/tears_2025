@@ -64,4 +64,50 @@ export const handlers = [
     }
     return res(ctx.status(204))
   }),
+
+  // GET teams
+  rest.get('*/api/teams', (req, res, ctx) => {
+    return res(
+      ctx.status(200),
+      ctx.json([
+        { id: 1, city: 'New York', nickname: 'Giants' },
+        { id: 2, city: 'Los Angeles', nickname: 'Rams' },
+        { id: 3, city: 'Miami', nickname: 'Dolphins' },
+      ])
+    )
+  }),
+  
+  // POST */api/picks - create pick
+  rest.post('*/api/picks', async (req, res, ctx) => {
+    const body = await req.json()
+    const entryId = Number(body.entry_id)
+    const teamId = Number(body.team_id)
+    // naive created pick
+    const created = { id: Math.floor(Math.random() * 100000) + 100, week: 1, team_id: teamId, entry_id: entryId }
+    return res(ctx.status(201), ctx.json(created))
+  }),
+  
+  // PATCH */api/picks/:id - update pick
+  rest.patch('*/api/picks/:id', async (req, res, ctx) => {
+    const { id } = req.params as { id: string }
+    const body = await req.json()
+    const updated = { id: Number(id), week: body.week ?? 1, team_id: body.team_id }
+    return res(ctx.status(200), ctx.json(updated))
+  }),
+
+  // GET entry picks
+  rest.get('*/api/entries/:entryId/picks', (req, res, ctx) => {
+    const { entryId } = req.params as { entryId: string }
+    // return sample picks for entry 1
+    if (Number(entryId) === 1) {
+      return res(
+        ctx.status(200),
+        ctx.json([
+          { id: 11, week: 1, team_id: 1 },
+          { id: 12, week: 2, team_id: 3 },
+        ])
+      )
+    }
+    return res(ctx.status(200), ctx.json([]))
+  }),
 ]

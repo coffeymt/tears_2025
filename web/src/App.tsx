@@ -9,6 +9,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 import AccountPage from './pages/Account'
 import Dashboard from './pages/Dashboard'
 import Entries from './pages/Entries'
+import Picks from './pages/Picks'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
   <Route path="dashboard" element={<Dashboard />} />
   <Route path="account" element={<AccountPage />} />
   <Route path="entries" element={<Entries />} />
+  <Route path="entries/:entryId/picks" element={<Picks />} />
         {/* protected and admin routes will be added in later subtasks */}
       </Route>
     </Routes>
