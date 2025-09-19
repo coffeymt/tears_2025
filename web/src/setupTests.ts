@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import '@testing-library/jest-dom'
 import { server } from './test/msw/server'
 

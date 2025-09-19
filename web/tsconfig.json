@@ -5,6 +5,7 @@
     "jsx": "react-jsx",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "types": ["vitest"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -14,4 +15,11 @@
     "noEmit": true
   },
   "include": ["src"]
+  ,
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/__tests__/**"
+    ,"src/setupTests.ts"
+  ]
 }

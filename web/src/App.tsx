@@ -10,6 +10,11 @@ import AccountPage from './pages/Account'
 import Dashboard from './pages/Dashboard'
 import Entries from './pages/Entries'
 import Picks from './pages/Picks'
+import AdminRoute from './routes/AdminRoute'
+import AdminLayout from './pages/admin/AdminLayout'
+import AdminIndex from './pages/admin'
+import WeeksList from './pages/admin/weeks/WeeksList'
+import WeekGamesPage from './pages/admin/weeks/games'
 
 export default function App() {
   return (
@@ -24,7 +29,14 @@ export default function App() {
   <Route path="account" element={<AccountPage />} />
   <Route path="entries" element={<Entries />} />
   <Route path="entries/:entryId/picks" element={<Picks />} />
-        {/* protected and admin routes will be added in later subtasks */}
+        <Route element={<AdminRoute />}>
+          <Route path="admin" element={<AdminLayout />}>
+            <Route index element={<AdminIndex />} />
+            <Route path="weeks" element={<WeeksList />} />
+            <Route path="weeks/:weekId/games" element={<WeekGamesPage />} />
+            {/* /admin/users, /admin/entries, /admin/import, /admin/broadcast will be added here */}
+          </Route>
+        </Route>
       </Route>
     </Routes>
   )
