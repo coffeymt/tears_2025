@@ -13,6 +13,7 @@ import Picks from './pages/Picks'
 import AdminRoute from './routes/AdminRoute'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminIndex from './pages/admin'
+import HistoryPage from './pages/history/HistoryPage'
 import WeeksList from './pages/admin/weeks/WeeksList'
 import WeekGamesPage from './pages/admin/weeks/games'
 
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="weeks" element={<WeeksList />} />
             <Route path="weeks/:weekId/games" element={<WeekGamesPage />} />
             {/* /admin/users, /admin/entries, /admin/import, /admin/broadcast will be added here */}
+            <Route path="/history" element={<HistoryPage />} />
           </Route>
         </Route>
       </Route>
