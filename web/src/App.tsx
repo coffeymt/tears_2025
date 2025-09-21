@@ -17,6 +17,7 @@ import HistoryPage from './pages/history/HistoryPage'
 import UsersPage from './pages/admin/users/UsersPage'
 import WeeksList from './pages/admin/weeks/WeeksList'
 import WeekGamesPage from './pages/admin/weeks/games'
+import BroadcastPage from './pages/admin/broadcast/BroadcastPage'
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
             {/* /admin/users, /admin/entries, /admin/import, /admin/broadcast will be added here */}
             <Route path="/history" element={<HistoryPage />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="broadcast" element={<BroadcastPage />} />
           </Route>
         </Route>
       </Route>
